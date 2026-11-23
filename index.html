@@ -28,10 +28,13 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700;800;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <title>SHIFT - Game Off 2026</title>
 <style>
-  html,body{margin:0;padding:0;width:100%;height:100%;background:#090614;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+  html,body{margin:0;padding:0;width:100%;height:100%;background:#090614;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Outfit',sans-serif}
   #game-wrap{position:relative;width:100%;height:100%;max-width:calc(100vh * 16 / 9);max-height:calc(100vw * 9 / 16);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(0,0,0,.85)}
   canvas{width:100%;height:100%;background:#000;display:block;touch-action:none}
 
@@ -50,24 +53,24 @@
       height: 100% !important;
     }
   }
-  #rotate-overlay{display:none;position:fixed;inset:0;z-index:9999;background:#090614;color:#fff;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;text-align:center;padding:24px}
+  #rotate-overlay{display:none;position:fixed;inset:0;z-index:9999;background:#090614;color:#fff;flex-direction:column;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;text-align:center;padding:24px}
   #rotate-overlay .icon{font-size:54px;margin-bottom:14px;color:#ffd166;animation:spinPhone 2.2s infinite ease-in-out}
   @keyframes spinPhone{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
   @media (orientation: portrait) and (max-width: 900px){#rotate-overlay{display:flex}}
 
   /* Profile Setup Modal - Compact & Elegant for Landscape & Mobile */
-  #profile-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(6,4,15,.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-family:"Trebuchet MS",sans-serif;padding:12px;box-sizing:border-box}
+  #profile-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(6,4,15,.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-family:'Outfit',sans-serif;padding:12px;box-sizing:border-box}
   #profile-box{background:linear-gradient(135deg,#1b1145,#2a1338);border:2px solid #ffd166;box-shadow:0 0 40px rgba(255,209,102,.3);border-radius:12px;padding:14px 20px;width:100%;max-width:390px;color:#fff;max-height:92vh;overflow-y:auto;box-sizing:border-box}
-  #profile-box h2{margin:0 0 8px;text-align:center;color:#ffd166;font-size:16px;letter-spacing:1px}
-  #profile-box label{font-size:11px;color:#c0c6ff;display:block;margin-top:6px}
-  #profile-box input,#profile-box select{width:100%;box-sizing:border-box;background:#09061e;border:1px solid #6c5ce7;color:#fff;padding:6px 10px;border-radius:6px;font-size:13px;margin-top:3px}
+  #profile-box h2{margin:0 0 8px;text-align:center;color:#ffd166;font-size:16px;letter-spacing:1.5px;font-family:'Cinzel',serif;font-weight:700}
+  #profile-box label{font-size:11px;color:#c0c6ff;display:block;margin-top:6px;font-family:'Outfit',sans-serif}
+  #profile-box input,#profile-box select{width:100%;box-sizing:border-box;background:#09061e;border:1px solid #6c5ce7;color:#fff;padding:6px 10px;border-radius:6px;font-size:13px;margin-top:3px;font-family:'Outfit',sans-serif}
   #profile-box input:focus,#profile-box select:focus{outline:none;border-color:#ffd166}
   .avatar-row{display:flex;gap:8px;margin-top:4px;justify-content:center}
   .av-btn{font-size:18px;background:#15102a;border:2px solid #584b7a;color:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;transition:all .18s ease;display:flex;align-items:center;justify-content:center}
   .av-btn:hover{background:#251c4a;border-color:#00cec9;transform:translateY(-1px)}
   .av-btn.selected{border-color:#ffd166;transform:scale(1.12);background:#2d1b54;box-shadow:0 0 14px rgba(255,209,102,.5)}
   .av-btn i{filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
-  #btn-save-profile{width:100%;margin-top:12px;background:linear-gradient(90deg,#f39c12,#ffd166);border:none;color:#1b1145;font-weight:bold;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+  #btn-save-profile{width:100%;margin-top:12px;background:linear-gradient(90deg,#f39c12,#ffd166);border:none;color:#1b1145;font-weight:bold;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:'Outfit',sans-serif}
 </style>
 </head>
 <body>

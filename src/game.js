@@ -579,9 +579,13 @@ function panel(x, y, w, h, fill = "rgba(14, 9, 32, .82)", stroke = "rgba(255, 25
   ctx.beginPath(); ctx.moveTo(x + 8, y + 1.5); ctx.lineTo(x + w - 8, y + 1.5); ctx.stroke();
   ctx.restore();
 }
-function text(s, x, y, size = 14, col = "#fff", align = "center", shadow = true) {
-  ctx.font = `bold ${size}px "Trebuchet MS", system-ui, sans-serif`; ctx.textAlign = align; ctx.textBaseline = "alphabetic";
-  if (shadow) { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillText(s, x + 1.5, y + 1.5); }
+const FONT_TITLE = '"Cinzel Decorative", "Cinzel", "Times New Roman", serif';
+const FONT_HEADER = '"Cinzel", "Outfit", "Georgia", serif';
+const FONT_BODY = '"Outfit", "Trebuchet MS", sans-serif';
+
+function text(s, x, y, size = 14, col = "#fff", align = "center", shadow = true, fontFam = FONT_BODY) {
+  ctx.font = `bold ${size}px ${fontFam}`; ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+  if (shadow) { ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillText(s, x + 1.5, y + 1.5); }
   ctx.fillStyle = col; ctx.fillText(s, x, y);
 }
 function star(cx, cy, r, fill) {
@@ -591,7 +595,7 @@ function star(cx, cy, r, fill) {
   ctx.strokeStyle = fill ? "#b8860b" : "rgba(255,255,255,.3)"; ctx.lineWidth = 1.5; ctx.stroke();
 }
 function keycap(label, x, y, w = 0) {
-  ctx.font = 'bold 11px "Trebuchet MS", sans-serif';
+  ctx.font = `bold 11px ${FONT_BODY}`;
   const tw = w || ctx.measureText(label).width + 12;
   rr(x, y - 13, tw, 18, 4); ctx.fillStyle = "#eee"; ctx.fill(); ctx.strokeStyle = "#888"; ctx.lineWidth = 1; ctx.stroke();
   ctx.fillStyle = "#222"; ctx.textAlign = "center"; ctx.fillText(label, x + tw / 2, y); return tw;
@@ -1326,11 +1330,11 @@ function drawHud() {
   panel(6, 6, W - 12, 28, "rgba(12, 8, 28, .85)", P.accent);
 
   // Left: Level Number / Name
-  text(LEVELS[li].name, 16, 25, 12, "#fff", "left");
+  text(LEVELS[li].name, 16, 25, 12, "#fff", "left", true, FONT_HEADER);
 
   // Center: World Name & Celestial Icon
   worldIcon(world, W / 2 - 40, 20, 7);
-  text(world ? "NIGHT" : "DAY", W / 2 - 28, 25, 12, P.accent, "left");
+  text(world ? "NIGHT" : "DAY", W / 2 - 28, 25, 12, P.accent, "left", true, FONT_HEADER);
 
   // Mid-Right items: Shifts budget & Shards
   let infoX = W / 2 + 30;
@@ -1407,24 +1411,24 @@ function drawFlag(lang, x, y, w = 18, h = 12) {
 function drawTitle() {
   const P = PAL[world], bob = Math.sin(T * 2) * 3;
   ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(0, 0, W, H);
-  ctx.save(); ctx.shadowColor = P.accent; ctx.shadowBlur = 24;
-  text("SHIFT", W / 2, 94 + bob, 66, "#fff"); ctx.restore();
-  text("SHIFT", W / 2, 94 + bob, 66, "#fff", "center", false);
-  worldIcon(0, W / 2 - 80, 122, 9); worldIcon(1, W / 2 + 80, 122, 9);
-  text("swap the world. slide the floor.", W / 2, 126, 12, "#fff");
+  ctx.save(); ctx.shadowColor = P.accent; ctx.shadowBlur = 32;
+  text("SHIFT", W / 2, 94 + bob, 72, "#fff", "center", true, FONT_TITLE); ctx.restore();
+  text("SHIFT", W / 2, 94 + bob, 72, "#fff", "center", false, FONT_TITLE);
+  worldIcon(0, W / 2 - 96, 122, 9); worldIcon(1, W / 2 + 96, 122, 9);
+  text("swap the world. slide the floor.", W / 2, 126, 12, "#ffd166", "center", true, FONT_HEADER);
 
   // Language & Country Badge in top-left with real flag icon
   const curLang = (typeof I18N !== "undefined") ? I18N.lang : "id";
   const flagLabel = curLang === "id" ? "INDONESIA" : "ENGLISH";
   panel(14, 8, 108, 22, "rgba(10,8,30,.88)", "#ffd166");
   drawFlag(curLang, 28, 19, 18, 11);
-  text(flagLabel, 72, 23, 10, "#fff");
+  text(flagLabel, 72, 23, 10, "#fff", "center", true, FONT_HEADER);
 
   // Player Profile Pill in top-right
   const pname = (typeof PlayerProfile !== "undefined") ? PlayerProfile.name : "Gamer";
   const pav = (typeof PlayerProfile !== "undefined" && PlayerProfile.avatarObj) ? PlayerProfile.avatarObj.symbol : "✦";
   panel(W - 132, 8, 118, 22, "rgba(10,8,30,.88)", P.accent);
-  text(`${pav} ${pname}`, W - 73, 23, 11, "#ffd166");
+  text(`${pav} ${pname}`, W - 73, 23, 11, "#ffd166", "center", true, FONT_HEADER);
 
   // Main menu items
   const items = [
@@ -1437,7 +1441,7 @@ function drawTitle() {
   items.forEach(([k, l], i) => {
     const y = 152 + i * 27, pulse = i === 0 ? .5 + .5 * Math.sin(T * 5) : 0;
     panel(W / 2 - 145, y - 18, 290, 24, i === 0 ? `rgba(255,255,255,${.14 + pulse * .14})` : "rgba(10,8,30,.55)", i === 0 ? "#ffd166" : "rgba(255,255,255,.2)");
-    keycap(k, W / 2 - 135, y, 42); text(l, W / 2 + 16, y, 12, "#fff", "center");
+    keycap(k, W / 2 - 135, y, 42); text(l, W / 2 + 16, y, 12, "#fff", "center", true, FONT_HEADER);
   });
 
   // Controls hint panel
@@ -1454,7 +1458,7 @@ function drawComic() {
   panel(W / 2 - 270, 15, 540, 330, "rgba(15, 9, 32, 0.98)", "#ffd166");
 
   const title = (typeof I18N !== "undefined") ? I18N.t("comicTitle") : "CHRONICLES OF THE TWILIGHT WEAVER";
-  text(title, W / 2, 38, 16, "#ffd166");
+  text(title, W / 2, 38, 16, "#ffd166", "center", true, FONT_HEADER);
 
   const pages = (typeof I18N !== "undefined") ? I18N.pages : [];
   const curPage = pages[comicPage] || { title: "", text: "" };
@@ -1475,7 +1479,7 @@ function drawComic() {
 
   // Comic caption box
   panel(W / 2 - 240, 222, 480, 68, "rgba(8, 5, 20, 0.85)", "rgba(255,255,255,0.2)");
-  text(curPage.title, W / 2, 238, 13, "#ffd166");
+  text(curPage.title, W / 2, 238, 13, "#ffd166", "center", true, FONT_HEADER);
 
   // Word-wrap caption
   const maxWidth = 450;
@@ -1483,7 +1487,7 @@ function drawComic() {
   let line = "", ly = 256;
   for (let n = 0; n < words.length; n++) {
     const testLine = line + words[n] + " ";
-    ctx.font = '11px "Trebuchet MS", sans-serif';
+    ctx.font = `11px ${FONT_BODY}`;
     const metrics = ctx.measureText(testLine);
     if (metrics.width > maxWidth && n > 0) {
       text(line, W / 2, ly, 11, "#cbd5e1", "center", false);
@@ -1498,14 +1502,14 @@ function drawComic() {
   // Navigation Buttons
   if (comicPage > 0) {
     panel(W / 2 - 200, 302, 90, 24, "rgba(255,255,255,0.12)", "#ffd166");
-    text("◀ Prev", W / 2 - 155, 318, 11, "#fff");
+    text("◀ Prev", W / 2 - 155, 318, 11, "#fff", "center", true, FONT_HEADER);
   }
   if (comicPage < pages.length - 1) {
     panel(W / 2 + 110, 302, 90, 24, "rgba(255,255,255,0.12)", "#ffd166");
-    text("Next ▶", W / 2 + 155, 318, 11, "#ffd166");
+    text("Next ▶", W / 2 + 155, 318, 11, "#ffd166", "center", true, FONT_HEADER);
   } else {
     panel(W / 2 + 90, 302, 110, 24, "rgba(46, 204, 113, 0.3)", "#2ecc71");
-    text("Start Playing ▶", W / 2 + 145, 318, 11, "#2ecc71");
+    text("Start Playing ▶", W / 2 + 145, 318, 11, "#2ecc71", "center", true, FONT_HEADER);
   }
 
   panel(W / 2 - 50, 302, 100, 24, "rgba(255,255,255,0.08)", "rgba(255,255,255,0.2)");
@@ -1519,7 +1523,7 @@ function drawLore() {
 function drawLeaderboard() {
   ctx.fillStyle = "rgba(6, 4, 15, 0.94)"; ctx.fillRect(0, 0, W, H);
   panel(W / 2 - 250, 25, 500, 310, "rgba(18, 12, 38, 0.96)", "#ffd166");
-  text("HALL OF FAME: LEADERBOARD", W / 2, 54, 18, "#ffd166");
+  text("HALL OF FAME: LEADERBOARD", W / 2, 54, 18, "#ffd166", "center", true, FONT_HEADER);
 
   const scores = (typeof Leaderboard !== "undefined") ? Leaderboard.getScores() : [];
 
@@ -1561,11 +1565,11 @@ function drawLeaderboard() {
 const SELCOLS = 7, SELPER = 21;
 function drawSelect() {
   ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(0, 0, W, H);
-  text("SELECT LEVEL", W / 2, 38, 24, "#fff");
+  text("SELECT LEVEL", W / 2, 38, 24, "#fff", "center", true, FONT_HEADER);
 
   // Top Back Button for mobile / mouse
   panel(14, 10, 84, 30, "rgba(255,255,255,0.18)", "#ffd166");
-  text("◀ Back", 56, 30, 13, "#ffd166");
+  text("◀ Back", 56, 30, 13, "#ffd166", "center", true, FONT_HEADER);
 
   const n = LEVELS.length, cols = SELCOLS, cw = 76, ch = 66, gap = 10, x0 = (W - (cols * cw + (cols - 1) * gap)) / 2;
   const page = Math.floor(cursor / SELPER), pages = Math.ceil(n / SELPER), first = page * SELPER;
@@ -1582,22 +1586,22 @@ function drawSelect() {
   if (pages > 1) {
     if (page > 0) {
       panel(W - 180, 10, 76, 30, "rgba(255,255,255,0.18)", "#ffd166");
-      text("◀ Prev", W - 142, 30, 12, "#fff");
+      text("◀ Prev", W - 142, 30, 12, "#fff", "center", true, FONT_HEADER);
     }
     if (page < pages - 1) {
       panel(W - 96, 10, 82, 30, "rgba(255,255,255,0.18)", "#ffd166");
-      text("Next ▶", W - 55, 30, 12, "#ffd166");
+      text("Next ▶", W - 55, 30, 12, "#ffd166", "center", true, FONT_HEADER);
     }
     text(`Page ${page + 1}/${pages}`, W / 2, H - 42, 11, "#cde", "center", false);
   }
 
   const sl = LEVELS[Math.min(cursor, n - 1)];
-  text(cursor > save.unlocked ? "Locked: clear the previous level" : sl.name, W / 2, H - 26, 13, "#ffd166");
+  text(cursor > save.unlocked ? "Locked: clear the previous level" : sl.name, W / 2, H - 26, 13, "#ffd166", "center", true, FONT_HEADER);
   text("◀ Slide / Swipe Halaman ▶   •   Tap Level untuk Main", W / 2, H - 10, 10, "rgba(255,255,255,.65)", "center", false);
 }
 function drawPause() {
   ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, H);
-  panel(W / 2 - 130, 80, 260, 190); text("PAUSED", W / 2, 116, 26, "#fff");
+  panel(W / 2 - 130, 80, 260, 190); text("PAUSED", W / 2, 116, 26, "#fff", "center", true, FONT_HEADER);
   [
     ["P / ESC", "Resume Game"],
     ["R", "Restart Level"],
@@ -1612,7 +1616,7 @@ function drawWin(final) {
   ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, H);
   const pop = Math.min(1, winT * 4), h = final ? 200 : 180; ctx.save(); ctx.translate(W / 2, 180); ctx.scale(.8 + .2 * pop, .8 + .2 * pop); ctx.translate(-W / 2, -180);
   panel(W / 2 - 160, 180 - h / 2, 320, h, "rgba(15,10,50,.88)", "#ffd166");
-  text(final ? "ALL LEVELS CLEARED!" : "LEVEL CLEAR!", W / 2, 180 - h / 2 + 38, final ? 24 : 28, "#ffd166");
+  text(final ? "ALL LEVELS CLEARED!" : "LEVEL CLEAR!", W / 2, 180 - h / 2 + 38, final ? 24 : 28, "#ffd166", "center", true, FONT_HEADER);
   for (let s = 0; s < 3; s++) { const shown = winT > .35 + s * .3; const sc = shown ? 1 + Math.max(0, .5 - (winT - .35 - s * .3) * 2) : 0; star(W / 2 - 44 + s * 44, 180 - h / 2 + 76, 17 * sc, s < winStars); }
   text(`Time ${levelTime.toFixed(1)}s${newBest ? "  - NEW BEST!" : ""}`, W / 2, 180 - h / 2 + 118, 14, "#fff");
   text(`Deaths ${levelDeaths}`, W / 2, 180 - h / 2 + 138, 14, "#fff");
