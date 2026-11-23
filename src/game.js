@@ -234,7 +234,7 @@ let flash = 0, shake = 0, msg = "", msgT = 0, banner = 0, fade = 0, cursor = 0, 
 let movers = [], plats = [], moverT = 0, accT = 0, gateClosed = true, runs = [], budget = Infinity, slideAnim = {}, pOff = 0;
 let shiftT = 0, prevWorld = 0, shiftX = 0, shiftY = 0, stepT = 0, titleT = 0, particles = [];
 let shards = [], shardsTotal = 0, shardsCollected = 0;
-let levelCols = 20, camX = 0, camTargetX = 0, boss = null;
+let levelCols = 20, camX = 0, camTargetX = 0, boss = null, bossParticles = [];
 const showPlayer = () => state !== "title" && state !== "select" && state !== "lore" && state !== "leaderboard";
 
 // Leaderboard integration helper
@@ -306,7 +306,7 @@ function load(i, intro = true) {
   player = { x: 0, y: 0, w: 22, h: 28, vx: 0, vy: 0, ground: false, coyote: 0, buf: 0, face: 1, ride: -1, gateWarned: false };
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < levelCols; c++)
     if (level[r][c] === "P") { player.x = c * TILE + 5; player.y = r * TILE + TILE - player.h; }
-  setWorld(0); shiftT = 0;
+  setWorld(0); shiftT = 0; bossParticles.length = 0;
   boss = LEVELS[i].boss ? {
     name: LEVELS[i].bossName || "VOID COLOSSUS",
     x: -140,
@@ -553,6 +553,33 @@ function update(dt) {
     boss.x += boss.vx * dt * (world ? 0.85 : 1.0);
     const tension = Math.max(0, 1 - (player.x - boss.x) / (W * 0.8));
     A.setBossTension(tension);
+
+    // Emit organic void particles and glowing embers from the shadow titan
+    if (Math.random() < 0.65) {
+      const isEmber = Math.random() < 0.45;
+      const headX = boss.x - 70;
+      const headY = 175 + Math.sin(T * 1.8) * 12;
+      bossParticles.push({
+        x: headX + 110 + (Math.random() - 0.5) * 35,
+        y: headY + 15 + (Math.random() - 0.5) * 45,
+        vx: -(45 + Math.random() * 65),
+        vy: (Math.random() - 0.5) * 32,
+        r: isEmber ? 1.8 + Math.random() * 2.2 : 12 + Math.random() * 16,
+        life: 1.0,
+        decay: isEmber ? 0.6 + Math.random() * 0.4 : 0.4 + Math.random() * 0.3,
+        isEmber,
+        col: isEmber ? (world === 0 ? "#ff4757" : "#c084fc") : (world === 0 ? "rgba(25, 8, 20," : "rgba(18, 6, 32,")
+      });
+    }
+
+    for (let i = bossParticles.length - 1; i >= 0; i--) {
+      const q = bossParticles[i];
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.life -= q.decay * dt;
+      if (q.life <= 0) bossParticles.splice(i, 1);
+    }
+
     // If boss touches player
     if (p.x < boss.x + 36) {
       say(`Caught by ${boss.name}!`);
@@ -562,6 +589,7 @@ function update(dt) {
     }
   } else {
     A.setBossTension(0);
+    if (bossParticles.length > 0) bossParticles.length = 0;
   }
 }
 
@@ -1263,94 +1291,101 @@ function drawBoss(w) {
   const bx = boss.x;
   ctx.save();
 
-  // 1. Soft atmospheric shadow mist wall (blends seamlessly into scenery)
-  const bgGrad = ctx.createLinearGradient(bx - 320, 0, bx + 120, 0);
+  // 1. Soft atmospheric shadow mist wall (blends seamlessly into background scenery)
+  const bgGrad = ctx.createLinearGradient(bx - 380, 0, bx + 140, 0);
   bgGrad.addColorStop(0, "rgba(4, 2, 10, 0.98)");
-  bgGrad.addColorStop(0.55, "rgba(16, 5, 26, 0.92)");
-  bgGrad.addColorStop(0.85, w === 0 ? "rgba(140, 15, 35, 0.45)" : "rgba(90, 20, 140, 0.45)");
+  bgGrad.addColorStop(0.5, "rgba(16, 5, 26, 0.90)");
+  bgGrad.addColorStop(0.82, w === 0 ? "rgba(130, 15, 35, 0.40)" : "rgba(80, 20, 140, 0.40)");
   bgGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = bgGrad;
-  ctx.fillRect(bx - 450, 0, 570, H);
+  ctx.fillRect(bx - 500, 0, 640, H);
 
-  // Soft rolling volumetric mist puffs
-  for (let i = 0; i < 9; i++) {
-    const puffY = i * 42 + 10;
-    const puffX = bx - 60 + Math.sin(T * 2 + i * 1.5) * 35;
-    const r = 55 + (i % 3) * 18;
-    const pGrad = ctx.createRadialGradient(puffX, puffY, 5, puffX, puffY, r);
-    pGrad.addColorStop(0, w === 0 ? "rgba(22, 6, 20, 0.85)" : "rgba(18, 8, 32, 0.85)");
-    pGrad.addColorStop(0.6, w === 0 ? "rgba(80, 10, 30, 0.35)" : "rgba(60, 15, 90, 0.35)");
-    pGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = pGrad;
+  // 2. Trailing Sinuous Leviathan Body Vertebrae (deep undulating shadow spine)
+  for (let i = 5; i >= 1; i--) {
+    const lagT = T * 2.2 - i * 0.45;
+    const segX = bx - 110 - i * 46 + Math.sin(lagT) * 12;
+    const segY = 175 + Math.sin(lagT * 0.8) * (16 + i * 4);
+    const segR = 64 - i * 6;
+    const segGrad = ctx.createRadialGradient(segX, segY, 4, segX, segY, segR);
+    segGrad.addColorStop(0, w === 0 ? "rgba(22, 6, 26, 0.92)" : "rgba(18, 6, 34, 0.92)");
+    segGrad.addColorStop(0.5, w === 0 ? "rgba(70, 12, 30, 0.4)" : "rgba(55, 15, 80, 0.4)");
+    segGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = segGrad;
     ctx.beginPath();
-    ctx.arc(puffX, puffY, r, 0, 7);
+    ctx.arc(segX, segY, segR, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // 2. Real-time animated breathing, bobbing & surging parameters
-  const breath = 1.0 + Math.sin(T * 3.2) * 0.035;
-  const bobY = Math.sin(T * 2.0) * 8;
-  const surgeX = Math.sin(T * 1.5) * 6;
-  const colAccent = w === 0 ? "#ff4757" : "#c084fc";
+  // 3. Render trailing void smoke puffs & glowing embers
+  for (let i = 0; i < bossParticles.length; i++) {
+    const p = bossParticles[i];
+    const alpha = Math.max(0, p.life);
+    if (p.isEmber) {
+      ctx.save();
+      ctx.shadowColor = p.col;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = p.col;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.38;
+      const grad = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, p.r);
+      grad.addColorStop(0, `${p.col} 0.75)`);
+      grad.addColorStop(1, `${p.col} 0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 
-  // 3. Render the Painterly Colossus Image Asset with dynamic breathing animation
+  // 4. Center-of-Mass Animated Titan Head Sprite with Rotational Sway and Natural Breathing
+  const bobY = Math.sin(T * 1.8) * 12;
+  const surgeX = Math.sin(T * 1.2) * 9;
+  const tiltAngle = Math.sin(T * 1.8) * 0.04; // subtle serpentine sway
+  const breath = 1.0 + Math.sin(T * 2.2) * 0.025; // natural organic breathing
+
+  const headCenterX = bx - 70 + surgeX;
+  const headCenterY = 175 + bobY;
+  const sprW = 440;
+  const sprH = 412;
+
   if (bossColossusImg && bossColossusImg.complete && bossColossusImg.naturalWidth > 0) {
-    const sprW = 394 * breath;
-    const sprH = 380 * (1 / breath);
-    const sprX = bx - 260 + surgeX;
-    const sprY = -10 + bobY;
-    ctx.drawImage(bossColossusImg, sprX, sprY, sprW, sprH);
-
-    // Glowing Animated Eye Flares on the Titan Face
-    const eyeX = sprX + sprW * 0.72;
-    const eyeY = sprY + sprH * 0.40;
-    const eyePulse = 0.8 + 0.3 * Math.sin(T * 6);
-
     ctx.save();
+    ctx.translate(headCenterX, headCenterY);
+    ctx.rotate(tiltAngle);
+    ctx.scale(breath, 1 / breath);
+
+    // Soft ominous aura behind sprite
+    ctx.shadowColor = w === 0 ? "rgba(255, 40, 80, 0.45)" : "rgba(168, 85, 247, 0.45)";
+    ctx.shadowBlur = 32;
+
+    // Draw sprite centered on pivot
+    ctx.drawImage(bossColossusImg, -sprW / 2, -sprH / 2, sprW, sprH);
+
+    // Pulsating glowing eye flare on the titan face
+    const eyePulse = 0.8 + 0.35 * Math.sin(T * 5.0);
+    const eyeRelX = (115 / 512) * sprW;
+    const eyeRelY = (12 / 480) * sprH;
+
     ctx.shadowColor = w === 0 ? "#ff0055" : "#a855f7";
     ctx.shadowBlur = 24 * eyePulse;
-    ctx.fillStyle = w === 0 ? `rgba(255, 0, 85, ${eyePulse})` : `rgba(168, 85, 247, ${eyePulse})`;
+    ctx.fillStyle = w === 0 ? `rgba(255, 60, 90, ${0.85 * eyePulse})` : `rgba(180, 100, 255, ${0.85 * eyePulse})`;
     ctx.beginPath();
-    ctx.arc(eyeX, eyeY, 9 * eyePulse, 0, 7);
+    ctx.arc(eyeRelX, eyeRelY, 8 * eyePulse, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(eyeX + 1, eyeY, 3.5, 0, 7);
+    ctx.arc(eyeRelX, eyeRelY, 3, 0, Math.PI * 2);
     ctx.fill();
+
     ctx.restore();
-  }
-
-  // 4. Animated Sinuous Void Tendrils Reaching Forward
-  ctx.lineWidth = 3.5;
-  for (let i = 0; i < 6; i++) {
-    const ty = 50 + i * 48 + bobY;
-    const wave = Math.sin(T * 4 + i * 1.3) * 26;
-    const wave2 = Math.cos(T * 3 + i * 1.1) * 18;
-    ctx.strokeStyle = w === 0 ? "rgba(220, 38, 38, 0.7)" : "rgba(168, 85, 247, 0.7)";
-    ctx.beginPath();
-    ctx.moveTo(bx - 30 + surgeX, ty);
-    ctx.bezierCurveTo(bx + 20, ty - 20 + wave, bx + 50, ty + 20 + wave2, bx + 85 + Math.cos(T * 2.5 + i) * 15, ty + wave * 0.7);
-    ctx.stroke();
-
-    // Glowing tip ember
-    ctx.fillStyle = colAccent;
-    ctx.beginPath();
-    ctx.arc(bx + 85 + Math.cos(T * 2.5 + i) * 15, ty + wave * 0.7, 3.5, 0, 7);
-    ctx.fill();
-  }
-
-  // 5. Arcane Crackling Lightning Sparks when raging
-  if (Math.sin(T * 10) > 0.35) {
-    ctx.strokeStyle = w === 0 ? "#ff6b81" : "#e056fd";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    const sy = 90 + Math.sin(T * 7) * 90;
-    ctx.moveTo(bx + 30, sy);
-    ctx.lineTo(bx + 55, sy - 18);
-    ctx.lineTo(bx + 48, sy - 8);
-    ctx.lineTo(bx + 78, sy - 24);
-    ctx.stroke();
   }
 
   ctx.restore();
