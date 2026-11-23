@@ -1,40 +1,69 @@
-# SHIFT
+# SHIFT: The Twilight Weaver
 
-Game Off 2026 entry (theme: **SHIFT**). A tiny puzzle-platformer where the Shift key swaps between two worlds, Day and Night. Gold blocks exist only by day, teal blocks only by night.
+A puzzle-platformer created for **[GitHub Game Off 2026](https://itch.io/jam/game-off-2026)** (Theme: **SHIFT**).
 
-## Play
-Open `index.html` in a browser (or serve the folder), no build step.
+> **Author & Creator:** [github.com/rachmatsumo](https://github.com/rachmatsumo)  
+> **Leaderboard:** Local High Scores & Hall of Fame (`src/leaderboard.js`)
 
-| Key | Action |
-|---|---|
-| Arrows / A D | move |
-| Space / W / Up | jump |
-| **Shift / E** | swap world (also slides purple blocks) |
-| R | restart level (does not count as a death) |
+---
 
-Night has **low gravity** (higher, floatier jumps) and **slows time** by half, so saws and platforms move slower. Purple blocks slide along their rails each shift. Some levels limit your shifts. You cannot shift if it would leave you inside a wall or on top of spikes.
+## 🌟 Filosofi & Konsep ("What does it mean to SHIFT?")
 
-### Tiles
-| Obstacle | Behaviour |
-|---|---|
-| Gold / teal blocks | solid only by day / only by night |
-| Orange spikes | deadly only in one world (the other shows a ghost outline) |
-| Red spikes (floor or ceiling) | always deadly |
-| Purple blocks on rails | slide one tile per shift and carry you |
-| Green pads | launch you upward (night gravity makes it far higher) |
-| Thin platforms | solid only when you land on them from above |
-| Saws (grey, spinning) | patrol a horizontal or vertical track; always deadly |
-| Moving platforms | ferry or lift you; land on them from above |
-| Lever + gates | touching the lever toggles every gate: striped gates open, ghost gates close |
+*Terkadang, solusi dari kebuntuan bukanlah memaksa maju, melainkan menggeser sudut pandang dan membiarkan diri melayang sejenak.*
 
-## Verify levels
-`tools/verify-parallel.sh` (all cores) or `node tools/verify-levels.js [n ...]` runs the real game code headlessly and searches for a winning input sequence in every level (exit code 1 if any level is unsolvable).
+1. **Shift of Reality (Pergeseran Realitas & Sudut Pandang):**  
+   Tembok buntu atau bahaya mematikan di satu dimensi hanyalah ilusi ketiadaan di dimensi lainnya. Saat kita menghadapi jalan buntu dalam hidup, kita tidak perlu memaksakan diri—kita hanya perlu menggeser cara pandang (*shift perspective*).
+2. **Shift of Gravity & Time (Dualitas Beban Kehidupan):**  
+   - **Siang:** Mewakili aksi, keduniawian, gravitasi yang berat, dan langkah cepat.  
+   - **Malam:** Mewakili introspeksi, kelegaan tanpa bobot (*low gravity*), dan perlambatan waktu.  
+   Keduanya saling melengkapi; kita membutuhkan gravitasi siang untuk melangkah maju, dan membutuhkan kelegaan malam untuk melompat lebih tinggi.
+3. **The Shift Key (Integrasi Antarmuka):**  
+   Tombol keyboard yang biasanya hanya digunakan untuk membesarkan huruf kini menjadi tuas pembelah semesta: satu klik kecil untuk lompatan realitas yang besar.
 
-## Develop
-Vanilla JS + Canvas. Levels live in `src/levels.js` as ASCII maps, so adding one is just a new entry.
+---
 
-## Release (itch.io)
-`zip -r shift.zip index.html src` and upload as an HTML5 game.
+## 🎮 Kontrol Permainan
 
-## License
-MIT
+### Desktop Keyboard
+- `A` / `D` atau `◀` / `▶` : Bergerak
+- `SPACE` / `W` / `▲` : Melompat (*Jump*)
+- `SHIFT` atau `E` / `K` : **SHIFT** (Tukar Dunia / Geser Rel Blok Ungu)
+- `P` atau `ESC` : Jeda Permainan (*Pause*)
+- `R` : Mengulang level secara cepat (*Quick Restart*)
+- `X` : Keluar ke Layar Utama (*Quit to Main Menu* - saat Pause)
+- `H` : Buka Dialog Filosofi & Kisah
+- `B` : Leaderboard Info (`shift.webkuy.com`)
+- `F` : Layar Penuh (*Fullscreen Mode*)
+- `M` : Mengaktifkan / Mematikan Suara (*Mute*)
+
+### Mobile & Touch Devices (PWA Ready)
+- Tombol sentuh virtual **secara cerdas tersembunyi di Desktop** (agar tampilan bersih dan tidak mengganggu), dan **otomatis aktif di perangkat layar sentuh/HP**:
+  - **Jempol Kiri:** D-Pad virtual horizontal (`◀` / `▶`).
+  - **Jempol Kanan:** Tombol aksi bercahaya untuk `JUMP` dan `SHIFT`.
+  - **Bar Navigasi Atas:** Akses cepat satu ketukan untuk Main Menu (`🏠`), Restart (`↺`), Fullscreen (`⛶`), dan Suara (`🔊`).
+
+---
+
+## 🏆 Leaderboard System (`src/leaderboard.js`)
+
+Papan peringkat (*Leaderboard / Hall of Fame*) kini berjalan secara lokal di server/browser menggunakan modul [src/leaderboard.js](file:///var/www/html/shift-game/src/leaderboard.js):
+- **Otomatis Mencatat Skor:** Setiap kali pemain menyelesaikan level, nama, level tertinggi, total waktu (*time*), jumlah kematian (*deaths*), dan bintang (*stars*) disimpan secara persisten (`localStorage`).
+- **Skor Default Hall of Fame:** Dilengkapi dengan entri awal (*TwilightWeaver, RachmatSumo, dll.*) sehingga leaderboard langsung terlihat hidup dan interaktif sejak awal.
+- **Akses Langsung:** Dapat dibuka dari Menu Utama dengan menekan tombol `B` di keyboard atau mengklik menu *"Leaderboard (High Scores)"*.
+
+---
+
+## 🛠 Tech Stack
+- **Zero External Dependencies:** 100% Vanilla ES6 JavaScript + Canvas 2D API (`1920x1080` native resolution).
+- **Procedural Modern Audio Engine:** Real-time polyphonic synthesis, chord progressions, Lydian/Dorian harmonies, and boss tension pulse.
+- **PWA & Offline Capable:** Service Worker caching (`sw.js`), web app manifest (`manifest.json`), dan overlay proteksi orientasi landscape.
+- **Headless BFS Solver:** Built-in verification suite (`node tools/verify-levels.js`) memvalidasi 50/50 level 100% solvable.
+
+---
+
+## 🚀 Rilis ke Itch.io
+1. Kompres berkas:
+   ```bash
+   zip -r shift-game.zip index.html manifest.json sw.js assets/ src/
+   ```
+2. Unggah `shift-game.zip` ke halaman proyek itch.io sebagai **HTML5 Game** dengan opsi *"Playable in browser"*.
