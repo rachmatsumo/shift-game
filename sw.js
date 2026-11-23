@@ -1,4 +1,4 @@
-const CACHE_NAME = "shift-v2";
+const CACHE_NAME = "shift-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const ASSETS = [
   "./src/game.js",
   "./src/levels.js",
   "./src/audio.js",
+  "./assets/boss_colossus.png",
   "./assets/comic_1.jpg",
   "./assets/comic_2.jpg",
   "./assets/comic_3.jpg",
@@ -25,16 +26,29 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
   self.skipWaiting();
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
 });
 
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE_NAME && caches.delete(k)))));
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE_NAME && caches.delete(k))))
+  );
   self.clients.claim();
 });
 
+// Network-First for dynamic updates, falling back to cache when offline
 self.addEventListener("fetch", e => {
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  if (e.request.method !== "GET") return;
+  e.respondWith(
+    fetch(e.request)
+      .then(res => {
+        if (res && res.status === 200) {
+          const resClone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, resClone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
 });
-

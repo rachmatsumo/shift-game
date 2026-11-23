@@ -58,22 +58,27 @@
   @keyframes spinPhone{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
   @media (orientation: portrait) and (max-width: 900px){#rotate-overlay{display:flex}}
 
-  /* Profile Setup Modal - Compact & Elegant for Landscape & Mobile */
-  #profile-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(6,4,15,.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-family:'Outfit',sans-serif;padding:12px;box-sizing:border-box}
-  #profile-box{background:linear-gradient(135deg,#1b1145,#2a1338);border:2px solid #ffd166;box-shadow:0 0 40px rgba(255,209,102,.3);border-radius:12px;padding:14px 20px;width:100%;max-width:390px;color:#fff;max-height:92vh;overflow-y:auto;box-sizing:border-box}
-  #profile-box h2{margin:0 0 8px;text-align:center;color:#ffd166;font-size:16px;letter-spacing:1.5px;font-family:'Cinzel',serif;font-weight:700}
-  #profile-box label{font-size:11px;color:#c0c6ff;display:block;margin-top:6px;font-family:'Outfit',sans-serif}
-  #profile-box input,#profile-box select{width:100%;box-sizing:border-box;background:#09061e;border:1px solid #6c5ce7;color:#fff;padding:6px 10px;border-radius:6px;font-size:13px;margin-top:3px;font-family:'Outfit',sans-serif}
+  /* Profile Setup Modal - Compact & Sleek for Landscape Mobile */
+  #profile-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(6,4,15,.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-family:'Outfit',sans-serif;padding:8px;box-sizing:border-box}
+  #profile-box{background:linear-gradient(135deg,#1b1145,#2a1338);border:2px solid #ffd166;box-shadow:0 0 35px rgba(255,209,102,.3);border-radius:12px;padding:10px 18px;width:100%;max-width:370px;color:#fff;max-height:92vh;overflow-y:auto;box-sizing:border-box}
+  #profile-box h2{margin:0 0 6px;text-align:center;color:#ffd166;font-size:15px;letter-spacing:1.2px;font-family:'Cinzel',serif;font-weight:700}
+  #profile-box label{font-size:10.5px;color:#c0c6ff;display:block;margin-top:4px;font-family:'Outfit',sans-serif}
+  #profile-box input,#profile-box select{width:100%;box-sizing:border-box;background:#09061e;border:1px solid #6c5ce7;color:#fff;padding:5px 9px;border-radius:6px;font-size:12.5px;margin-top:2px;font-family:'Outfit',sans-serif}
   #profile-box input:focus,#profile-box select:focus{outline:none;border-color:#ffd166}
-  .avatar-row{display:flex;gap:8px;margin-top:4px;justify-content:center}
-  .av-btn{font-size:18px;background:#15102a;border:2px solid #584b7a;color:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;transition:all .18s ease;display:flex;align-items:center;justify-content:center}
+  .avatar-row{display:flex;gap:7px;margin-top:3px;justify-content:center}
+  .av-btn{font-size:16px;background:#15102a;border:2px solid #584b7a;color:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;transition:all .18s ease;display:flex;align-items:center;justify-content:center}
   .av-btn:hover{background:#251c4a;border-color:#00cec9;transform:translateY(-1px)}
-  .av-btn.selected{border-color:#ffd166;transform:scale(1.12);background:#2d1b54;box-shadow:0 0 14px rgba(255,209,102,.5)}
+  .av-btn.selected{border-color:#ffd166;transform:scale(1.1);background:#2d1b54;box-shadow:0 0 12px rgba(255,209,102,.5)}
   .av-btn i{filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
-  #btn-save-profile{width:100%;margin-top:12px;background:linear-gradient(90deg,#f39c12,#ffd166);border:none;color:#1b1145;font-weight:bold;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:'Outfit',sans-serif}
+  #btn-save-profile{width:100%;background:linear-gradient(90deg,#f39c12,#ffd166);border:none;color:#1b1145;font-weight:bold;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12.5px;font-family:'Outfit',sans-serif}
 </style>
 </head>
 <body>
+<!-- Hidden typography activator ensuring Web Fonts render on canvas immediately -->
+<div style="position:fixed;top:-999px;opacity:0;pointer-events:none;font-family:'Cinzel Decorative';font-weight:900" aria-hidden="true">SHIFT</div>
+<div style="position:fixed;top:-999px;opacity:0;pointer-events:none;font-family:'Cinzel';font-weight:700" aria-hidden="true">SHIFT</div>
+<div style="position:fixed;top:-999px;opacity:0;pointer-events:none;font-family:'Outfit';font-weight:600" aria-hidden="true">SHIFT</div>
+
 <div id="rotate-overlay">
   <div class="icon"><i class="bi bi-phone-landscape"></i></div>
   <h2 style="margin:0 0 8px">Mode Landscape Diperlukan</h2>
@@ -119,14 +124,23 @@
 </div>
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  navigator.serviceWorker.register('./sw.js?v=6').then(reg => {
+    reg.update();
+  }).catch(()=>{});
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
 }
 </script>
-<script src="src/i18n.js"></script>
-<script src="src/profile.js"></script>
-<script src="src/leaderboard.js"></script>
-<script src="src/levels.js"></script>
-<script src="src/audio.js"></script>
-<script src="src/game.js"></script>
+<script src="src/i18n.js?v=6"></script>
+<script src="src/profile.js?v=6"></script>
+<script src="src/leaderboard.js?v=6"></script>
+<script src="src/levels.js?v=6"></script>
+<script src="src/audio.js?v=6"></script>
+<script src="src/game.js?v=6"></script>
 </body>
 </html>
