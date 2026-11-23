@@ -313,6 +313,7 @@ function load(i, intro = true) {
     vx: LEVELS[i].bossSpeed || 42,
     active: true
   } : null;
+  if (boss && intro) A.bossRoar();
   if (intro) { banner = 2.6; levelDeaths = 0; levelTime = 0; fade = .5; }
 }
 // ---- Real-time movers (deterministic: positions are a pure function of moverT, which runs at
@@ -584,6 +585,7 @@ function update(dt) {
     if (p.x < boss.x + 36) {
       say(`Caught by ${boss.name}!`);
       shake = 0.4;
+      A.bossStrike();
       die();
       return;
     }

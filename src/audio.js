@@ -1,5 +1,6 @@
 // Procedural audio: modern cinematic ambient synth pads, adaptive world crossfade,
-// boss tension drone, and rich organic sound effects. 100% Web Audio, zero external assets.
+// native tribal instruments (war drums, slit-drums, bronze gong), boss tension pulse,
+// and rich organic sound effects. 100% Web Audio, zero external assets.
 const Audio8 = (() => {
   let ac, master, sfxG, musG, dayG, nightG, bossG, noiseBuf, timer;
   let muted = false, world = 0, step = 0, nextT = 0, duck = 1, bossTension = 0;
@@ -23,7 +24,7 @@ const Audio8 = (() => {
     musG = ac.createGain(); musG.gain.value = .45; musG.connect(master);
 
     dayG = ac.createGain(); nightG = ac.createGain(); bossG = ac.createGain();
-    dayG.connect(musG); nightG.connect(musG); bossG.connect(musG);
+    dayG.connect(musG); nightG.connect(musG); bossG.connect(master); // Connect bossG directly to master for powerful presence
 
     dayG.gain.value = world ? 0 : 1;
     nightG.gain.value = world ? 1 : 0;
@@ -79,6 +80,123 @@ const Audio8 = (() => {
     s.connect(fl).connect(g).connect(sfxG); s.start(t); s.stop(t + dur + .02);
   }
 
+  // ---- Native Instruments Synthesis
+
+  // 1. Tribal War Drum / Kendang (Deep hollow wooden body with skin slap transient)
+  function tribalDrum(vol = 0.35, isHeavy = true, delay = 0) {
+    if (!ac || muted) return;
+    const t = ac.currentTime + delay;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const filter = ac.createBiquadFilter();
+
+    const startFreq = isHeavy ? 180 : 250;
+    const endFreq = isHeavy ? 46 : 64;
+    const dur = isHeavy ? 0.34 : 0.22;
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(startFreq, t);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(isHeavy ? 82 : 115, t);
+    filter.Q.setValueAtTime(3.6, t);
+
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(vol * 0.9, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    osc.connect(filter).connect(gain).connect(bossG);
+    osc.start(t); osc.stop(t + dur + 0.02);
+
+    // Mallet / hand attack slap transient
+    if (noiseBuf) {
+      const ns = ac.createBufferSource();
+      ns.buffer = noiseBuf;
+      const nf = ac.createBiquadFilter();
+      nf.type = "bandpass";
+      nf.frequency.setValueAtTime(isHeavy ? 1300 : 2100, t);
+      nf.Q.setValueAtTime(2.2, t);
+      const ng = ac.createGain();
+      ng.gain.setValueAtTime(vol * 0.3, t);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.024);
+      ns.connect(nf).connect(ng).connect(bossG);
+      ns.start(t); ns.stop(t + 0.03);
+    }
+  }
+
+  // 2. Native Slit Drum / Woodblock (Kentongan hollow wooden tap)
+  function nativeSlitDrum(vol = 0.22, high = false, delay = 0) {
+    if (!ac || muted) return;
+    const t = ac.currentTime + delay;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const filter = ac.createBiquadFilter();
+    const f = high ? 860 : 520;
+    const dur = 0.068;
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(f, t);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.72, t + dur);
+
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(f, t);
+    filter.Q.setValueAtTime(6.2, t);
+
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    osc.connect(filter).connect(gain).connect(bossG);
+    osc.start(t); osc.stop(t + dur + 0.01);
+  }
+
+  // 3. Native Ceremonial Bronze Gong (Gong Ageng / Himalayan resonant bell with "ombak" acoustic beating)
+  function nativeGong(vol = 0.5, fundamental = 72, delay = 0) {
+    if (!ac || muted) return;
+    const t = ac.currentTime + delay;
+    const dur = 4.0;
+    const gongMaster = ac.createGain();
+    gongMaster.gain.setValueAtTime(0.0001, t);
+    gongMaster.gain.linearRampToValueAtTime(vol, t + 0.015);
+    gongMaster.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    gongMaster.connect(sfxG);
+
+    // Bronze inharmonic partial ratios with acoustic detuning (ombak)
+    const partials = [
+      { r: 1.0,   v: 0.85, type: "sine" },     // Deep fundamental
+      { r: 1.018, v: 0.65, type: "sine" },    // Ombak acoustic beat wave
+      { r: 1.414, v: 0.38, type: "triangle" },// Tritone partial
+      { r: 2.14,  v: 0.26, type: "sine" },    // Shimmering bronze overtone
+      { r: 3.16,  v: 0.14, type: "sine" }     // High rim chime
+    ];
+
+    partials.forEach(p => {
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = p.type;
+      o.frequency.setValueAtTime(fundamental * p.r, t);
+      g.gain.setValueAtTime(p.v, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur * (p.r > 2 ? 0.45 : 1.0));
+      o.connect(g).connect(gongMaster);
+      o.start(t); o.stop(t + dur + 0.05);
+    });
+
+    // Padded mallet strike thud
+    if (noiseBuf) {
+      const strike = ac.createBufferSource();
+      strike.buffer = noiseBuf;
+      const sFilt = ac.createBiquadFilter();
+      sFilt.type = "lowpass";
+      sFilt.frequency.setValueAtTime(280, t);
+      const sGain = ac.createGain();
+      sGain.gain.setValueAtTime(vol * 0.45, t);
+      sGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+      strike.connect(sFilt).connect(sGain).connect(sfxG);
+      strike.start(t); strike.stop(t + 0.09);
+    }
+  }
+
   function schedule() {
     if (!ac) return;
     if (nextT < ac.currentTime) nextT = ac.currentTime + .05;
@@ -88,7 +206,14 @@ const Audio8 = (() => {
       const dn = dayPat[i], nn = nightPat[i];
       const relT = nextT - ac.currentTime;
 
-      // Day ambient arpeggio / bells
+      // When boss tension is active, duck ambient pads so native drums take center stage!
+      if (bossTension > 0) {
+        if (musG) musG.gain.setTargetAtTime(0.18, nextT, .1);
+      } else {
+        if (musG) musG.gain.setTargetAtTime(0.45, nextT, .2);
+      }
+
+      // Day ambient arpeggio / bells (played softly in background during boss)
       if (dn >= 0) {
         const f = DAY_NOTES[dn % DAY_NOTES.length];
         tone(f, dur * 2.2, "sine", .09, 0, relT, dayG);
@@ -108,14 +233,45 @@ const Audio8 = (() => {
         tone(hz(-29), dur * 8, "triangle", .24, 0, relT, nightG);
       }
 
-      // Boss tension rhythmic pulse
-      if (bossTension > 0 && i % 2 === 0) {
-        const bpFreq = 65 + Math.sin(step) * 15;
-        tone(bpFreq, .12, "sawtooth", .15 * bossTension, -20, relT, bossG);
+      // Dynamic Native Tribal Chase Rhythm!
+      if (bossTension > 0) {
+        const tensionVol = 0.28 + 0.45 * bossTension;
+
+        // Step 0: Heavy Native War Drum + Bronze Gong every 16 steps
+        if (i === 0) {
+          tribalDrum(tensionVol * 1.1, true, relT);
+          if (step % 32 === 0) nativeGong(0.38 * bossTension, 72, relT);
+        }
+        // Step 4: Mid tribal tom
+        else if (i === 4) {
+          tribalDrum(tensionVol * 0.85, false, relT);
+        }
+        // Step 8: Double heavy war drum
+        else if (i === 8) {
+          tribalDrum(tensionVol * 1.05, true, relT);
+        }
+        // Step 10: Syncopated wooden slit-drum
+        else if (i === 10) {
+          nativeSlitDrum(tensionVol * 0.75, false, relT);
+        }
+        // Step 12: Driving heavy bass strike
+        else if (i === 12) {
+          tribalDrum(tensionVol * 0.95, true, relT);
+        }
+        // Step 14: Fast native rimshot
+        else if (i === 14) {
+          nativeSlitDrum(tensionVol * 0.7, true, relT);
+          if (bossTension > 0.6) nativeSlitDrum(tensionVol * 0.55, false, relT + 0.08);
+        }
+
+        // High tension urgent ghost notes (when boss is dangerously close, tension > 0.6)
+        if (bossTension > 0.6 && (i === 2 || i === 6)) {
+          nativeSlitDrum(tensionVol * 0.55, true, relT);
+        }
       }
 
       // Soft cinematic shaker/pulse
-      if (i % 4 === 2) {
+      if (i % 4 === 2 && bossTension <= 0) {
         const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
         s.buffer = noiseBuf; f.type = "bandpass"; f.frequency.value = 4200; f.Q.value = 3;
         g.gain.setValueAtTime(.03, nextT); g.gain.exponentialRampToValueAtTime(.0001, nextT + .07);
@@ -143,8 +299,49 @@ const Audio8 = (() => {
     },
     setBossTension(val) {
       bossTension = Math.max(0, Math.min(1, val));
-      if (bossG && ac) bossG.gain.setTargetAtTime(bossTension * 0.45, ac.currentTime, .1);
+      if (bossG && ac) bossG.gain.setTargetAtTime(bossTension > 0 ? 0.9 : 0, ac.currentTime, .1);
     },
+    // Boss Native Sound Effects
+    bossRoar() {
+      if (!ac || muted) return;
+      nativeGong(0.75, 64);
+      // Low guttural abyssal leviathan growl
+      const t = ac.currentTime;
+      const o1 = ac.createOscillator(), o2 = ac.createOscillator();
+      const filt = ac.createBiquadFilter(), g = ac.createGain();
+      o1.type = "sawtooth"; o2.type = "sawtooth";
+      o1.frequency.setValueAtTime(140, t);
+      o1.frequency.exponentialRampToValueAtTime(42, t + 1.3);
+      o2.frequency.setValueAtTime(144, t);
+      o2.frequency.exponentialRampToValueAtTime(45, t + 1.3);
+
+      filt.type = "lowpass";
+      filt.frequency.setValueAtTime(420, t);
+      filt.frequency.exponentialRampToValueAtTime(85, t + 1.3);
+      filt.Q.setValueAtTime(4.2, t);
+
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.38, t + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+
+      o1.connect(filt); o2.connect(filt);
+      filt.connect(g).connect(sfxG);
+      o1.start(t); o2.start(t);
+      o1.stop(t + 1.45); o2.stop(t + 1.45);
+    },
+    bossStrike() {
+      if (!ac || muted) return;
+      nativeGong(0.85, 50);
+      noise(0.5, 0.45, "lowpass", 700, 35);
+      tone(120, 0.4, "sawtooth", 0.35, -85);
+    },
+    bossHeartbeat() {
+      if (!ac || muted) return;
+      tribalDrum(0.5, true);
+    },
+    tribalDrum,
+    nativeGong,
+    nativeSlitDrum,
     duck(on) { if (musG) musG.gain.setTargetAtTime(on ? .14 : .45, ac.currentTime, .12); },
     pad() {
       tone(220, .35, "sine", .14, 880);
