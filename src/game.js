@@ -246,6 +246,12 @@ function setState(s, pushHistory = true) {
   const prev = state;
   state = s;
   if (s === "pause") A.pause(true), A.duck(true); else A.duck(false);
+  if (s === "title" || s === "select" || s === "lore" || s === "leaderboard" || s === "win" || s === "end") {
+    A.playMusic("menu");
+  } else if (s === "play") {
+    if (boss && boss.active) A.playMusic("boss");
+    else A.playMusic(li < 25 ? "day" : "night");
+  }
   if (pushHistory && typeof history !== "undefined" && history.pushState && s !== prev) {
     try {
       history.pushState({ screen: s }, "");
@@ -315,6 +321,10 @@ function load(i, intro = true) {
   } : null;
   if (boss && intro) A.bossRoar();
   if (intro) { banner = 2.6; levelDeaths = 0; levelTime = 0; fade = .5; }
+  if (state === "play") {
+    if (boss) A.playMusic("boss");
+    else A.playMusic(i < 25 ? "day" : "night");
+  }
 }
 // ---- Real-time movers (deterministic: positions are a pure function of moverT, which runs at
 // half speed at NIGHT). k/K = saw on a horizontal track, v/V = saw on a vertical track,
@@ -1921,5 +1931,6 @@ if (typeof window !== "undefined") {
   if (typeof I18N !== "undefined") I18N.init();
 }
 load(0, false);
+A.playMusic("menu");
 requestAnimationFrame(frame);
 })();

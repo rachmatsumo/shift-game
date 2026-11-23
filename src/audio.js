@@ -1,14 +1,102 @@
-// Procedural audio: modern cinematic ambient synth pads, adaptive world crossfade,
-// native tribal instruments (war drums, slit-drums, bronze gong), boss tension pulse,
-// and rich organic sound effects. 100% Web Audio, zero external assets.
+// Procedural audio + native MP3 background soundtrack streaming:
+// - Title / Menu / Lore: Amber Light Through Bamboo (warm acoustic native flute/strings)
+// - Levels 1-25: The Sunlight Between Boughs (lush 3-min forest exploration theme)
+// - Levels 26-49: Beyond The Willow Gate (mystical twilight progression theme)
+// - Boss Encounters (multiples of 5): Crown of Cold Iron (relentless boss chase theme)
+// Layered with native Web Audio tribal percussion (war drums, slit-drums, bronze gong, and roar).
+// 100% self-contained, low memory footprint, zero external CDNs.
+
 const Audio8 = (() => {
   let ac, master, sfxG, musG, dayG, nightG, bossG, noiseBuf, timer;
   let muted = false, world = 0, step = 0, nextT = 0, duck = 1, bossTension = 0;
   try { muted = localStorage.getItem("shift_muted") === "1"; } catch {}
 
+  // Native MP3 Soundtrack Streaming Controller
+  const TRACKS = {
+    menu: "assets/audio/Amber_Light_Through_Bamboo.mp3",
+    day: "assets/audio/The_Sunlight_Between_Boughs.mp3",
+    night: "assets/audio/Beyond_The_Willow_Gate.mp3",
+    boss: "assets/audio/Crown_of_Cold_Iron_boss.mp3"
+  };
+
+  const audioElements = {};
+  let currentTrackName = null;
+  let crossfadeInterval = null;
+
+  function getAudioElement(name) {
+    if (typeof Audio === "undefined") return null;
+    if (!audioElements[name] && TRACKS[name]) {
+      try {
+        const el = new Audio(TRACKS[name]);
+        el.loop = true;
+        el.preload = "auto";
+        el.volume = 0;
+        audioElements[name] = el;
+      } catch (e) {}
+    }
+    return audioElements[name];
+  }
+
+  function playMusic(name) {
+    if (typeof Audio === "undefined") return;
+    if (!name || !TRACKS[name]) return;
+    if (currentTrackName === name && audioElements[name] && !audioElements[name].paused) return;
+
+    const oldTrackName = currentTrackName;
+    const oldTrack = audioElements[oldTrackName];
+    currentTrackName = name;
+    const nextTrack = getAudioElement(name);
+    if (!nextTrack) return;
+
+    if (crossfadeInterval) clearInterval(crossfadeInterval);
+
+    if (!muted) {
+      try {
+        const p = nextTrack.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
+
+    let step = 0;
+    const steps = 14;
+    const targetVol = muted ? 0 : (name === "boss" ? 0.78 : 0.54);
+
+    crossfadeInterval = setInterval(() => {
+      step++;
+      const factor = step / steps;
+      if (oldTrack && oldTrack !== nextTrack) {
+        oldTrack.volume = Math.max(0, (1 - factor) * (muted ? 0 : 0.54));
+        if (step >= steps) {
+          oldTrack.pause();
+        }
+      }
+      if (nextTrack) {
+        nextTrack.volume = muted ? 0 : factor * targetVol;
+      }
+      if (step >= steps) {
+        clearInterval(crossfadeInterval);
+        crossfadeInterval = null;
+      }
+    }, 45);
+  }
+
+  function updateMusicMute(isMuted) {
+    for (const k in audioElements) {
+      if (isMuted) {
+        audioElements[k].volume = 0;
+      }
+    }
+    if (!isMuted && currentTrackName && audioElements[currentTrackName]) {
+      const el = audioElements[currentTrackName];
+      el.volume = currentTrackName === "boss" ? 0.78 : 0.54;
+      try {
+        const p = el.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
+  }
+
   // Pentatonic & Atmospheric chords
-  // DAY: Lydian / Major Warm Ambient Pad (Cmaj9 / Fmaj9)
-  // NIGHT: Mystical Dorian / Aeolian Twilight Chime (Am9 / Em9)
   const DAY_NOTES = [261.63, 329.63, 392.00, 493.88, 587.33, 659.25, 783.99]; // C, E, G, B, D, E, G
   const NIGHT_NOTES = [220.00, 261.63, 329.63, 392.00, 440.00, 523.25, 659.25]; // A, C, E, G, A, C, E
   const hz = s => 261.63 * Math.pow(2, s / 12);
@@ -17,14 +105,23 @@ const Audio8 = (() => {
   const nightPat = [0, -1, 3, -1, 2, 4, -1, 1, 0, -1, 4, -1, 2, 5, 3, -1];
 
   function init() {
-    if (ac) { if (ac.state === "suspended") ac.resume(); return; }
+    if (ac) {
+      if (ac.state === "suspended") ac.resume();
+      if (!muted && currentTrackName && audioElements[currentTrackName] && audioElements[currentTrackName].paused) {
+        try {
+          const p = audioElements[currentTrackName].play();
+          if (p && p.catch) p.catch(() => {});
+        } catch (e) {}
+      }
+      return;
+    }
     try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
     master = ac.createGain(); master.gain.value = muted ? 0 : .75; master.connect(ac.destination);
     sfxG = ac.createGain(); sfxG.gain.value = .9; sfxG.connect(master);
-    musG = ac.createGain(); musG.gain.value = .45; musG.connect(master);
+    musG = ac.createGain(); musG.gain.value = .38; musG.connect(master);
 
     dayG = ac.createGain(); nightG = ac.createGain(); bossG = ac.createGain();
-    dayG.connect(musG); nightG.connect(musG); bossG.connect(master); // Connect bossG directly to master for powerful presence
+    dayG.connect(musG); nightG.connect(musG); bossG.connect(master);
 
     dayG.gain.value = world ? 0 : 1;
     nightG.gain.value = world ? 1 : 0;
@@ -35,6 +132,9 @@ const Audio8 = (() => {
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     nextT = ac.currentTime + .1;
     timer = setInterval(schedule, 50);
+
+    // Start background soundtrack playback
+    playMusic(currentTrackName || "menu");
   }
 
   // Modern atmospheric synth note with harmonic depth and stereo-like warmth
@@ -45,7 +145,7 @@ const Audio8 = (() => {
     o1.type = isNight ? "sine" : "triangle";
     o2.type = "sine";
     o1.frequency.setValueAtTime(f, t);
-    o2.frequency.setValueAtTime(f * 1.004, t); // gentle chorus detune
+    o2.frequency.setValueAtTime(f * 1.004, t);
 
     fl.type = "lowpass";
     fl.frequency.setValueAtTime(isNight ? 1200 : 2200, t);
@@ -80,7 +180,7 @@ const Audio8 = (() => {
     s.connect(fl).connect(g).connect(sfxG); s.start(t); s.stop(t + dur + .02);
   }
 
-  // ---- Native Instruments Synthesis
+  // ---- Native Tribal Instruments
 
   // 1. Tribal War Drum / Kendang (Deep hollow wooden body with skin slap transient)
   function tribalDrum(vol = 0.35, isHeavy = true, delay = 0) {
@@ -109,7 +209,6 @@ const Audio8 = (() => {
     osc.connect(filter).connect(gain).connect(bossG);
     osc.start(t); osc.stop(t + dur + 0.02);
 
-    // Mallet / hand attack slap transient
     if (noiseBuf) {
       const ns = ac.createBufferSource();
       ns.buffer = noiseBuf;
@@ -151,7 +250,7 @@ const Audio8 = (() => {
     osc.start(t); osc.stop(t + dur + 0.01);
   }
 
-  // 3. Native Ceremonial Bronze Gong (Gong Ageng / Himalayan resonant bell with "ombak" acoustic beating)
+  // 3. Native Ceremonial Bronze Gong (Gong Ageng with "ombak" acoustic beating)
   function nativeGong(vol = 0.5, fundamental = 72, delay = 0) {
     if (!ac || muted) return;
     const t = ac.currentTime + delay;
@@ -162,13 +261,12 @@ const Audio8 = (() => {
     gongMaster.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     gongMaster.connect(sfxG);
 
-    // Bronze inharmonic partial ratios with acoustic detuning (ombak)
     const partials = [
-      { r: 1.0,   v: 0.85, type: "sine" },     // Deep fundamental
-      { r: 1.018, v: 0.65, type: "sine" },    // Ombak acoustic beat wave
-      { r: 1.414, v: 0.38, type: "triangle" },// Tritone partial
-      { r: 2.14,  v: 0.26, type: "sine" },    // Shimmering bronze overtone
-      { r: 3.16,  v: 0.14, type: "sine" }     // High rim chime
+      { r: 1.0,   v: 0.85, type: "sine" },
+      { r: 1.018, v: 0.65, type: "sine" },
+      { r: 1.414, v: 0.38, type: "triangle" },
+      { r: 2.14,  v: 0.26, type: "sine" },
+      { r: 3.16,  v: 0.14, type: "sine" }
     ];
 
     partials.forEach(p => {
@@ -182,7 +280,6 @@ const Audio8 = (() => {
       o.start(t); o.stop(t + dur + 0.05);
     });
 
-    // Padded mallet strike thud
     if (noiseBuf) {
       const strike = ac.createBufferSource();
       strike.buffer = noiseBuf;
@@ -206,76 +303,46 @@ const Audio8 = (() => {
       const dn = dayPat[i], nn = nightPat[i];
       const relT = nextT - ac.currentTime;
 
-      // When boss tension is active, duck ambient pads so native drums take center stage!
-      if (bossTension > 0) {
-        if (musG) musG.gain.setTargetAtTime(0.18, nextT, .1);
-      } else {
-        if (musG) musG.gain.setTargetAtTime(0.45, nextT, .2);
+      // Soft procedural chime layer behind the streaming soundtrack
+      if (bossTension <= 0) {
+        if (dn >= 0 && world === 0) {
+          const f = DAY_NOTES[dn % DAY_NOTES.length];
+          tone(f * 2, dur * 1.5, "sine", .035, 0, relT, dayG);
+        }
+        if (nn >= 0 && world === 1) {
+          const f = NIGHT_NOTES[nn % NIGHT_NOTES.length];
+          tone(f * 2, dur * 2.2, "sine", .045, 0, relT, nightG);
+        }
       }
 
-      // Day ambient arpeggio / bells (played softly in background during boss)
-      if (dn >= 0) {
-        const f = DAY_NOTES[dn % DAY_NOTES.length];
-        tone(f, dur * 2.2, "sine", .09, 0, relT, dayG);
-        if (i % 4 === 0) tone(f * 2, dur * 1.5, "triangle", .04, 0, relT, dayG);
-      }
-
-      // Night mystical resonant chimes
-      if (nn >= 0) {
-        const f = NIGHT_NOTES[nn % NIGHT_NOTES.length];
-        tone(f, dur * 3.5, "sine", .12, 0, relT, nightG);
-        tone(f * .5, dur * 4.0, "sine", .16, 0, relT, nightG);
-      }
-
-      // Sub bass foundation
-      if (i % 8 === 0) {
-        tone(hz(-24), dur * 7, "sine", .22, 0, relT, dayG);
-        tone(hz(-29), dur * 8, "triangle", .24, 0, relT, nightG);
-      }
-
-      // Dynamic Native Tribal Chase Rhythm!
+      // Dynamic Native Tribal Chase Rhythm when Boss is active!
       if (bossTension > 0) {
         const tensionVol = 0.28 + 0.45 * bossTension;
 
-        // Step 0: Heavy Native War Drum + Bronze Gong every 16 steps
         if (i === 0) {
           tribalDrum(tensionVol * 1.1, true, relT);
           if (step % 32 === 0) nativeGong(0.38 * bossTension, 72, relT);
         }
-        // Step 4: Mid tribal tom
         else if (i === 4) {
           tribalDrum(tensionVol * 0.85, false, relT);
         }
-        // Step 8: Double heavy war drum
         else if (i === 8) {
           tribalDrum(tensionVol * 1.05, true, relT);
         }
-        // Step 10: Syncopated wooden slit-drum
         else if (i === 10) {
           nativeSlitDrum(tensionVol * 0.75, false, relT);
         }
-        // Step 12: Driving heavy bass strike
         else if (i === 12) {
           tribalDrum(tensionVol * 0.95, true, relT);
         }
-        // Step 14: Fast native rimshot
         else if (i === 14) {
           nativeSlitDrum(tensionVol * 0.7, true, relT);
           if (bossTension > 0.6) nativeSlitDrum(tensionVol * 0.55, false, relT + 0.08);
         }
 
-        // High tension urgent ghost notes (when boss is dangerously close, tension > 0.6)
         if (bossTension > 0.6 && (i === 2 || i === 6)) {
           nativeSlitDrum(tensionVol * 0.55, true, relT);
         }
-      }
-
-      // Soft cinematic shaker/pulse
-      if (i % 4 === 2 && bossTension <= 0) {
-        const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
-        s.buffer = noiseBuf; f.type = "bandpass"; f.frequency.value = 4200; f.Q.value = 3;
-        g.gain.setValueAtTime(.03, nextT); g.gain.exponentialRampToValueAtTime(.0001, nextT + .07);
-        s.connect(f).connect(g).connect(dayG); s.start(nextT); s.stop(nextT + .08);
       }
 
       nextT += dur; step++;
@@ -285,10 +352,13 @@ const Audio8 = (() => {
   const api = {
     init,
     get muted() { return muted; },
+    get currentTrack() { return currentTrackName; },
+    playMusic,
     toggleMute() {
       init(); muted = !muted;
       try { localStorage.setItem("shift_muted", muted ? "1" : "0"); } catch {}
       if (master) master.gain.setTargetAtTime(muted ? 0 : .75, ac.currentTime, .03);
+      updateMusicMute(muted);
       if (!muted) api.click();
       return muted;
     },
@@ -299,13 +369,11 @@ const Audio8 = (() => {
     },
     setBossTension(val) {
       bossTension = Math.max(0, Math.min(1, val));
-      if (bossG && ac) bossG.gain.setTargetAtTime(bossTension > 0 ? 0.9 : 0, ac.currentTime, .1);
+      if (bossG && ac) bossG.gain.setTargetAtTime(bossTension > 0 ? 0.95 : 0, ac.currentTime, .1);
     },
-    // Boss Native Sound Effects
     bossRoar() {
       if (!ac || muted) return;
       nativeGong(0.75, 64);
-      // Low guttural abyssal leviathan growl
       const t = ac.currentTime;
       const o1 = ac.createOscillator(), o2 = ac.createOscillator();
       const filt = ac.createBiquadFilter(), g = ac.createGain();
@@ -335,14 +403,14 @@ const Audio8 = (() => {
       noise(0.5, 0.45, "lowpass", 700, 35);
       tone(120, 0.4, "sawtooth", 0.35, -85);
     },
-    bossHeartbeat() {
-      if (!ac || muted) return;
-      tribalDrum(0.5, true);
-    },
     tribalDrum,
     nativeGong,
     nativeSlitDrum,
-    duck(on) { if (musG) musG.gain.setTargetAtTime(on ? .14 : .45, ac.currentTime, .12); },
+    duck(on) {
+      if (typeof Audio !== "undefined" && currentTrackName && audioElements[currentTrackName]) {
+        audioElements[currentTrackName].volume = muted ? 0 : (on ? 0.2 : (currentTrackName === "boss" ? 0.78 : 0.54));
+      }
+    },
     pad() {
       tone(220, .35, "sine", .14, 880);
       tone(440, .28, "triangle", .08, 660, .02);
@@ -360,7 +428,6 @@ const Audio8 = (() => {
     move() { tone(480, .035, "sine", .07); },
     back() { tone(420, .08, "sine", .08, -140); },
     jump() {
-      // Modern warm jump whoosh + acoustic sine kick
       tone(240, .16, "sine", .11, 380);
       noise(.08, .04, "bandpass", 400, 1800);
     },
@@ -373,13 +440,12 @@ const Audio8 = (() => {
       noise(.025, .02, "bandpass", 1600 + Math.random() * 500, 800);
     },
     shift(w) {
-      // Modern ethereal whoosh with cinematic harmonic wash
-      if (w) { // Day -> Night (Deep cosmic dive)
+      if (w) {
         noise(.45, .16, "bandpass", 3200, 180);
         tone(523, .4, "sine", .12, -260);
         tone(392, .45, "triangle", .09, -200, .03);
         tone(261, .6, "sine", .15, -120, .06);
-      } else { // Night -> Day (Bright celestial bloom)
+      } else {
         noise(.45, .16, "bandpass", 220, 3600);
         tone(261, .4, "sine", .12, 260);
         tone(392, .45, "triangle", .09, 200, .03);
