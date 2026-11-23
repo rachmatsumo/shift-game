@@ -1247,107 +1247,160 @@ function drawMovers(w) {
 }
 
 // Boss: Menacing Void Shadow Colossus that sweeps across screen chasing traveler
+// Boss: Colossal Ancient Shadow Leviathan / Void Titan with clear anatomical skull, sweeping horns & atmospheric mist
 function drawBoss(w) {
   if (!boss || !boss.active) return;
   const bx = boss.x;
   ctx.save();
 
-  // 1. Swirling dark void fog wall
-  const bgGrad = ctx.createLinearGradient(bx - 140, 0, bx + 55, 0);
-  bgGrad.addColorStop(0, "rgba(5, 2, 12, 0.98)");
-  bgGrad.addColorStop(0.65, "rgba(22, 6, 36, 0.92)");
-  bgGrad.addColorStop(0.9, w === 0 ? "rgba(180, 20, 40, 0.35)" : "rgba(120, 30, 200, 0.35)");
+  // 1. Soft atmospheric shadow mist wall (NO hard polygon cuts!)
+  const bgGrad = ctx.createLinearGradient(bx - 260, 0, bx + 110, 0);
+  bgGrad.addColorStop(0, "rgba(4, 2, 10, 0.98)");
+  bgGrad.addColorStop(0.5, "rgba(16, 5, 26, 0.92)");
+  bgGrad.addColorStop(0.8, w === 0 ? "rgba(140, 15, 35, 0.4)" : "rgba(90, 20, 140, 0.4)");
   bgGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = bgGrad;
-  ctx.fillRect(bx - 360, 0, 420, H);
+  ctx.fillRect(bx - 400, 0, 520, H);
 
-  // 2. Towering Colossus Silhouette & Spire Horns
-  ctx.fillStyle = "rgba(10, 4, 18, 0.95)";
-  ctx.beginPath();
-  ctx.moveTo(bx - 60, H);
-  ctx.lineTo(bx - 10, 80);
-  ctx.lineTo(bx + 15, 40); // Main Horn
-  ctx.lineTo(bx + 25, 95);
-  ctx.lineTo(bx + 38, 140);
-  ctx.lineTo(bx + 20, 220);
-  ctx.lineTo(bx + 35, 280);
-  ctx.lineTo(bx - 20, H);
-  ctx.closePath();
-  ctx.fill();
-
-  // 3. Waving Segmented Void Tendrils with Ethereal Glowing Tips
-  const tendrilCol = w === 0 ? "rgba(255, 71, 87, 0.85)" : "rgba(168, 85, 247, 0.85)";
-  const glowCol = w === 0 ? "#ff4757" : "#c084fc";
-  ctx.lineWidth = 4;
-  for (let i = 0; i < 7; i++) {
-    const ty = i * 50 + 15;
-    const wave = Math.sin(T * 4.5 + i * 1.2) * 26;
-    const wave2 = Math.cos(T * 3.2 + i * 0.9) * 18;
-    ctx.strokeStyle = tendrilCol;
+  // Soft rolling volumetric mist puffs
+  for (let i = 0; i < 9; i++) {
+    const puffY = i * 42 + 10;
+    const puffX = bx - 40 + Math.sin(T * 2 + i * 1.5) * 35;
+    const r = 55 + (i % 3) * 18;
+    const pGrad = ctx.createRadialGradient(puffX, puffY, 5, puffX, puffY, r);
+    pGrad.addColorStop(0, w === 0 ? "rgba(22, 6, 20, 0.85)" : "rgba(18, 8, 32, 0.85)");
+    pGrad.addColorStop(0.6, w === 0 ? "rgba(80, 10, 30, 0.35)" : "rgba(60, 15, 90, 0.35)");
+    pGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = pGrad;
     ctx.beginPath();
-    ctx.moveTo(bx - 30, ty);
-    ctx.bezierCurveTo(bx + 18, ty - 20 + wave, bx + 36, ty + 20 + wave2, bx + 58 + Math.cos(T * 3 + i) * 14, ty + wave * 0.6);
-    ctx.stroke();
-
-    // Glowing tip spark
-    ctx.fillStyle = glowCol;
-    ctx.beginPath();
-    ctx.arc(bx + 58 + Math.cos(T * 3 + i) * 14, ty + wave * 0.6, 3.5, 0, 7);
+    ctx.arc(puffX, puffY, r, 0, 7);
     ctx.fill();
   }
 
-  // 4. Arcane Crackling Lightning Sparks
-  if (Math.sin(T * 12) > 0.4) {
-    ctx.strokeStyle = w === 0 ? "#ff6b81" : "#e056fd";
-    ctx.lineWidth = 1.5;
+  // 2. Colossal Titan / Leviathan Head Position
+  const headX = bx + 25;
+  const headY = 175 + Math.sin(T * 2.2) * 12;
+  const colAccent = w === 0 ? "#ff4757" : "#c084fc";
+
+  // Sinuous Back Tendrils / Leviathan Mane
+  ctx.lineWidth = 3.5;
+  for (let i = 0; i < 6; i++) {
+    const ty = headY - 80 + i * 32;
+    const wave = Math.sin(T * 4 + i * 1.3) * 24;
+    const wave2 = Math.cos(T * 3 + i * 1.1) * 16;
+    ctx.strokeStyle = w === 0 ? "rgba(220, 38, 38, 0.65)" : "rgba(147, 51, 234, 0.65)";
     ctx.beginPath();
-    const sy = 100 + Math.sin(T * 7) * 80;
-    ctx.moveTo(bx + 20, sy);
-    ctx.lineTo(bx + 40, sy - 15);
-    ctx.lineTo(bx + 35, sy - 5);
-    ctx.lineTo(bx + 60, sy - 20);
+    ctx.moveTo(headX - 60, ty);
+    ctx.bezierCurveTo(headX - 10, ty + wave, headX + 30, ty - 15 + wave2, headX + 75 + Math.cos(T * 2.5 + i) * 15, ty + wave * 0.7);
     ctx.stroke();
+
+    // Glowing tip ember
+    ctx.fillStyle = colAccent;
+    ctx.beginPath();
+    ctx.arc(headX + 75 + Math.cos(T * 2.5 + i) * 15, ty + wave * 0.7, 3, 0, 7);
+    ctx.fill();
   }
 
-  // 5. Giant Menacing Predatory Eyes with Slit Pupils & Glowing Iris Rings
-  const eyeBaseY = 135 + Math.sin(T * 2.5) * 8;
-  const eyeCol = w === 0 ? "#ff0055" : "#a855f7";
-  const eyeCore = w === 0 ? "#ffdd59" : "#ffffff";
+  // 3. Sweeping Ancient Titan Horns
+  // Main Upper Great Horn
+  ctx.fillStyle = "#0c0414";
+  ctx.strokeStyle = colAccent;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(headX - 15, headY - 30);
+  ctx.bezierCurveTo(headX - 45, headY - 75, headX - 60, headY - 115, headX - 30, headY - 135); // Horn tip
+  ctx.bezierCurveTo(headX - 15, headY - 105, headX + 5, headY - 65, headX + 5, headY - 25);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
 
-  // Outer demonic aura glow
+  // Secondary Lower Cheek Horn / Spine
+  ctx.beginPath();
+  ctx.moveTo(headX - 25, headY + 15);
+  ctx.bezierCurveTo(headX - 65, headY + 25, headX - 85, headY + 45, headX - 75, headY + 65);
+  ctx.bezierCurveTo(headX - 50, headY + 45, headX - 30, headY + 35, headX - 15, headY + 28);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 4. Clearly Defined Skull, Brow & Fanged Jaws Silhouette
+  ctx.fillStyle = "#08020d";
+  ctx.strokeStyle = colAccent;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(headX - 45, headY - 30); // Crown / neck join
+  ctx.lineTo(headX + 5, headY - 32);  // Forehead plate
+  ctx.lineTo(headX + 28, headY - 15); // Snout bridge
+  ctx.lineTo(headX + 48, headY - 4);  // Snout tip / upper jaw
+  ctx.lineTo(headX + 38, headY + 12); // Upper tooth 1
+  ctx.lineTo(headX + 26, headY + 8);
+  ctx.lineTo(headX + 18, headY + 18); // Upper tooth 2
+  ctx.lineTo(headX + 8, headY + 14);  // Inside mouth / throat
+  ctx.lineTo(headX + 22, headY + 32); // Lower tooth
+  ctx.lineTo(headX + 36, headY + 30); // Lower jaw tip
+  ctx.lineTo(headX + 18, headY + 48); // Chin
+  ctx.lineTo(headX - 25, headY + 52); // Throat underside
+  ctx.lineTo(headX - 65, headY + 70); // Neck base
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 5. Deep Fiery Throat Vortex (Inside Mouth Glow)
+  ctx.fillStyle = w === 0 ? "rgba(255, 71, 87, 0.75)" : "rgba(168, 85, 247, 0.75)";
+  ctx.beginPath();
+  ctx.arc(headX + 12, headY + 18, 9, 0, 7);
+  ctx.fill();
+
+  // 6. Forehead Runic Crest (Glowing Sigil between brow and horns)
   ctx.save();
-  ctx.shadowColor = eyeCol;
-  ctx.shadowBlur = 18;
-
-  // Eye 1 (Primary large eye)
-  ctx.fillStyle = eyeCol;
+  ctx.shadowColor = colAccent;
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = "#ffd166";
   ctx.beginPath();
-  ctx.arc(bx + 22, eyeBaseY, 11, 0, 7);
-  ctx.fill();
-
-  // Eye 2 (Upper secondary eye)
-  ctx.beginPath();
-  ctx.arc(bx + 16, eyeBaseY - 22, 7.5, 0, 7);
-  ctx.fill();
-
-  // Eye 3 (Lower tertiary eye)
-  ctx.beginPath();
-  ctx.arc(bx + 12, eyeBaseY + 24, 6, 0, 7);
+  const rx = headX + 2, ry = headY - 24;
+  ctx.moveTo(rx, ry - 7); ctx.lineTo(rx + 4, ry); ctx.lineTo(rx, ry + 7); ctx.lineTo(rx - 4, ry);
+  ctx.closePath();
   ctx.fill();
   ctx.restore();
 
-  // Inner bright iris & pupils
-  ctx.fillStyle = eyeCore;
+  // 7. Clearly Anatomical Glowing Predatory Eyes (Angled fiercely forward!)
+  // Eye Socket (Dark recess)
+  const eyeX = headX + 18, eyeY = headY - 10;
+  ctx.fillStyle = "#000000";
   ctx.beginPath();
-  ctx.arc(bx + 24, eyeBaseY, 4.5, 0, 7);
-  ctx.arc(bx + 18, eyeBaseY - 22, 3, 0, 7);
-  ctx.arc(bx + 14, eyeBaseY + 24, 2.2, 0, 7);
+  ctx.ellipse(eyeX, eyeY, 11, 7, -0.2, 0, 7);
   ctx.fill();
 
-  // Vertical slit pupil
-  ctx.fillStyle = "#110418";
-  ctx.fillRect(bx + 23.5, eyeBaseY - 6, 2, 12);
-  ctx.fillRect(bx + 17.5, eyeBaseY - 25, 1.6, 6);
+  // Glowing Eye Core with trail
+  ctx.save();
+  ctx.shadowColor = w === 0 ? "#ff0055" : "#a855f7";
+  ctx.shadowBlur = 16;
+  ctx.fillStyle = w === 0 ? "#ff0055" : "#c084fc";
+  ctx.beginPath();
+  ctx.ellipse(eyeX, eyeY, 8.5, 5, -0.2, 0, 7);
+  ctx.fill();
+
+  // Intense bright yellow/white center
+  ctx.fillStyle = w === 0 ? "#ffeaa7" : "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(eyeX, eyeY, 5, 3, -0.2, 0, 7);
+  ctx.fill();
+
+  // Sharp vertical predatory pupil
+  ctx.fillStyle = "#0c0210";
+  ctx.fillRect(eyeX - 1.2, eyeY - 5, 2.4, 10);
+  ctx.restore();
+
+  // Secondary Eye (Further in perspective, top brow)
+  const eye2X = headX + 2, eye2Y = headY - 18;
+  ctx.fillStyle = w === 0 ? "#ff4757" : "#a855f7";
+  ctx.beginPath();
+  ctx.ellipse(eye2X, eye2Y, 4.5, 3, -0.2, 0, 7);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(eye2X, eye2Y, 1.8, 0, 7);
+  ctx.fill();
 
   ctx.restore();
 }
