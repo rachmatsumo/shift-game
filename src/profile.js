@@ -13,7 +13,7 @@ const PlayerProfile = (() => {
   ];
 
   let profile = {
-    name: "Traveler",
+    name: "Gamer",
     avatar: "weaver",
     country: "ID",
     countryName: "Indonesia",
@@ -39,9 +39,9 @@ const PlayerProfile = (() => {
   load();
 
   return {
-    get name() { return profile.name || "Traveler"; },
+    get name() { return profile.name || "Gamer"; },
     set name(val) {
-      profile.name = (val || "Traveler").slice(0, 14);
+      profile.name = (val || "Gamer").slice(0, 14);
       profile.initialized = true;
       save();
     },

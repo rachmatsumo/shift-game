@@ -7,17 +7,23 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="SHIFT: The Twilight Weaver - a puzzle-platformer where every shift swaps the world, the gravity and the time. Made for GitHub Game Off 2026.">
+<meta name="author" content="github.com/rachmatsumo">
+<meta name="description" content="SHIFT: The Twilight Weaver - a handcrafted puzzle-platformer where every shift swaps the world, the gravity, and time itself. Crafted for GitHub Game Off 2026.">
+<meta name="keywords" content="shift, puzzle platformer, game off 2026, github game off, html5 canvas game, pwa, vanilla js, degrees of separation">
+<meta property="og:site_name" content="SHIFT: The Twilight Weaver">
 <meta property="og:type" content="website">
 <meta property="og:title" content="SHIFT: The Twilight Weaver">
-<meta property="og:description" content="Swap the world. Slide the floor. A day/night puzzle-platformer for GitHub Game Off 2026 (theme: SHIFT).">
+<meta property="og:description" content="Swap the world. Slide the floor. Master the duality of day and night across 50 handcrafted puzzle levels.">
 <meta property="og:image" content="assets/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="SHIFT: The Twilight Weaver - Game Thumbnail & Cover Art">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SHIFT: The Twilight Weaver">
-<meta name="twitter:description" content="Swap the world. Slide the floor. A day/night puzzle-platformer for GitHub Game Off 2026.">
+<meta name="twitter:description" content="Swap the world. Slide the floor. Master the duality of day and night across 50 handcrafted puzzle levels.">
 <meta name="twitter:image" content="assets/og-image.jpg">
+<meta name="twitter:image:alt" content="SHIFT: The Twilight Weaver - Game Thumbnail & Cover Art">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
@@ -28,24 +34,40 @@
   html,body{margin:0;padding:0;width:100%;height:100%;background:#090614;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
   #game-wrap{position:relative;width:100%;height:100%;max-width:calc(100vh * 16 / 9);max-height:calc(100vw * 9 / 16);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(0,0,0,.85)}
   canvas{width:100%;height:100%;background:#000;display:block;touch-action:none}
+
+  /* On mobile touch devices in landscape mode: stretch canvas 100% full screen to eliminate black pillarbox borders */
+  @media (max-height: 500px), (pointer: coarse) and (orientation: landscape) {
+    #game-wrap {
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      aspect-ratio: unset !important;
+      box-shadow: none !important;
+    }
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  }
   #rotate-overlay{display:none;position:fixed;inset:0;z-index:9999;background:#090614;color:#fff;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;text-align:center;padding:24px}
   #rotate-overlay .icon{font-size:54px;margin-bottom:14px;color:#ffd166;animation:spinPhone 2.2s infinite ease-in-out}
   @keyframes spinPhone{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
   @media (orientation: portrait) and (max-width: 900px){#rotate-overlay{display:flex}}
 
-  /* Profile Setup Modal */
-  #profile-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(6,4,15,.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-family:"Trebuchet MS",sans-serif}
-  #profile-box{background:linear-gradient(135deg,#1b1145,#2a1338);border:2px solid #ffd166;box-shadow:0 0 40px rgba(255,209,102,.3);border-radius:14px;padding:24px;width:90%;max-width:440px;color:#fff}
-  #profile-box h2{margin:0 0 14px;text-align:center;color:#ffd166;font-size:20px;letter-spacing:1px}
-  #profile-box label{font-size:12px;color:#c0c6ff;display:block;margin-top:10px}
-  #profile-box input,#profile-box select{width:100%;box-sizing:border-box;background:#09061e;border:1px solid #6c5ce7;color:#fff;padding:8px 12px;border-radius:6px;font-size:14px;margin-top:4px}
+  /* Profile Setup Modal - Compact & Elegant for Landscape & Mobile */
+  #profile-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(6,4,15,.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-family:"Trebuchet MS",sans-serif;padding:12px;box-sizing:border-box}
+  #profile-box{background:linear-gradient(135deg,#1b1145,#2a1338);border:2px solid #ffd166;box-shadow:0 0 40px rgba(255,209,102,.3);border-radius:12px;padding:14px 20px;width:100%;max-width:390px;color:#fff;max-height:92vh;overflow-y:auto;box-sizing:border-box}
+  #profile-box h2{margin:0 0 8px;text-align:center;color:#ffd166;font-size:16px;letter-spacing:1px}
+  #profile-box label{font-size:11px;color:#c0c6ff;display:block;margin-top:6px}
+  #profile-box input,#profile-box select{width:100%;box-sizing:border-box;background:#09061e;border:1px solid #6c5ce7;color:#fff;padding:6px 10px;border-radius:6px;font-size:13px;margin-top:3px}
   #profile-box input:focus,#profile-box select:focus{outline:none;border-color:#ffd166}
-  .avatar-row{display:flex;gap:12px;margin-top:8px;justify-content:center}
-  .av-btn{font-size:24px;background:#15102a;border:2px solid #584b7a;color:#fff;border-radius:10px;padding:8px 14px;cursor:pointer;transition:all .18s ease;display:flex;align-items:center;justify-content:center}
-  .av-btn:hover{background:#251c4a;border-color:#00cec9;transform:translateY(-2px)}
-  .av-btn.selected{border-color:#ffd166;transform:scale(1.15);background:#2d1b54;box-shadow:0 0 16px rgba(255,209,102,.5)}
-  .av-btn i{filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
-  #btn-save-profile{width:100%;margin-top:18px;background:linear-gradient(90deg,#f39c12,#ffd166);border:none;color:#1b1145;font-weight:bold;padding:10px;border-radius:8px;cursor:pointer;font-size:14px}
+  .avatar-row{display:flex;gap:8px;margin-top:4px;justify-content:center}
+  .av-btn{font-size:18px;background:#15102a;border:2px solid #584b7a;color:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;transition:all .18s ease;display:flex;align-items:center;justify-content:center}
+  .av-btn:hover{background:#251c4a;border-color:#00cec9;transform:translateY(-1px)}
+  .av-btn.selected{border-color:#ffd166;transform:scale(1.12);background:#2d1b54;box-shadow:0 0 14px rgba(255,209,102,.5)}
+  .av-btn i{filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+  #btn-save-profile{width:100%;margin-top:12px;background:linear-gradient(90deg,#f39c12,#ffd166);border:none;color:#1b1145;font-weight:bold;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px}
 </style>
 </head>
 <body>
@@ -57,10 +79,12 @@
 
 <!-- Player Profile Modal Dialog -->
 <div id="profile-modal">
-  <div id="profile-box">
-    <h2 id="prof-title"><i class="bi bi-person-badge"></i> TRAVELER PROFILE</h2>
-    <label id="lbl-name">Player Name:</label>
-    <input type="text" id="prof-name" maxlength="14" placeholder="Enter traveler name">
+  <div id="profile-box" style="position:relative">
+    <button id="btn-top-back-profile" aria-label="Back" style="position:absolute;top:8px;left:10px;background:rgba(255,255,255,0.12);border:1px solid #ffd166;color:#ffd166;padding:4px 9px;border-radius:6px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px"><i class="bi bi-arrow-left"></i> Back</button>
+    <button id="btn-close-profile" aria-label="Close" style="position:absolute;top:8px;right:10px;background:rgba(255,255,255,0.12);border:1px solid #ff7675;color:#ff7675;width:28px;height:28px;border-radius:50%;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="bi bi-x-lg"></i></button>
+    <h2 id="prof-title" style="margin:2px 0 10px"><i class="bi bi-person-badge"></i> GAMER PROFILE</h2>
+    <label id="lbl-name">Gamer Name:</label>
+    <input type="text" id="prof-name" maxlength="14" placeholder="Enter gamer name" value="Gamer" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 
     <label id="lbl-avatar">Choose Avatar:</label>
     <div class="avatar-row" id="avatar-container"></div>
@@ -80,7 +104,10 @@
       <option value="OTHER">GL - Global / Other</option>
     </select>
 
-    <button id="btn-save-profile"><i class="bi bi-check-circle"></i> Save & Start Journey</button>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button id="btn-cancel-profile" style="flex:1;background:rgba(255,255,255,0.12);border:1px solid #6c5ce7;color:#fff;font-weight:bold;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:12px"><i class="bi bi-arrow-left"></i> Back</button>
+      <button id="btn-save-profile" style="flex:2;margin-top:0;background:linear-gradient(90deg,#f39c12,#ffd166);border:none;color:#1b1145;font-weight:bold;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px"><i class="bi bi-check-circle"></i> Save & Play</button>
+    </div>
   </div>
 </div>
 

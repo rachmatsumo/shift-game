@@ -42,7 +42,7 @@ const Leaderboard = (() => {
     },
 
     submitScore(name, level, time, deaths, stars, avatar = "weaver", country = "ID") {
-      if (!name) name = "Traveler";
+      if (!name) name = "Gamer";
       const scores = loadScores();
       const newEntry = {
         name: name.slice(0, 14),

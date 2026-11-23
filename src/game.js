@@ -60,6 +60,7 @@ addEventListener("keydown", e => {
 addEventListener("keyup", e => { keysRaw[e.code] = false; keys[e.code] = false; });
 addEventListener("blur", () => { for (const k in keys) keys[k] = false; if (state === "play") setState("pause"); });
 
+let gestureStartX = 0, gestureStartY = 0, gestureStartTime = 0;
 if (typeof window !== "undefined") {
   addEventListener("pointerdown", e => {
     A.init();
@@ -68,6 +69,10 @@ if (typeof window !== "undefined") {
     if (e.pointerType === "touch" || isTouchDevice) {
       activeTouches.set(e.pointerId, pt);
     }
+    gestureStartX = pt.x;
+    gestureStartY = pt.y;
+    gestureStartTime = Date.now();
+
     // Utility icons on touch or mouse click
     if (pt.y < 36) {
       if (Math.hypot(pt.x - (W - 28), pt.y - 18) < 16) A.toggleMute();
@@ -78,21 +83,37 @@ if (typeof window !== "undefined") {
     if (state === "title") {
       // Check top badges
       if (pt.y <= 36 && pt.x >= W - 140) { A.click(); openProfileModal(); return; }
-      if (pt.y <= 36 && pt.x <= 100 && typeof I18N !== "undefined") { A.click(); I18N.toggleLang(); return; }
+      if (pt.y <= 36 && pt.x <= 130 && typeof I18N !== "undefined") { A.click(); I18N.toggleLang(); return; }
 
-      // Check menu button clicks
-      if (pt.y >= 140 && pt.y <= 165) {
-        A.click();
-        if (typeof PlayerProfile !== "undefined" && !PlayerProfile.isConfigured) {
-          openProfileModal(() => { deaths = 0; time = 0; startLevel(0); });
-        } else {
-          deaths = 0; time = 0; startLevel(0);
+      // Check menu button clicks: only trigger when clicking INSIDE the menu panel horizontal bounds
+      const inMenuX = pt.x >= (W / 2 - 145) && pt.x <= (W / 2 + 145);
+      if (inMenuX) {
+        if (pt.y >= 134 && pt.y <= 158) {
+          A.click();
+          if (typeof PlayerProfile !== "undefined" && !PlayerProfile.isConfigured) {
+            openProfileModal(() => { deaths = 0; time = 0; startLevel(0); });
+          } else {
+            deaths = 0; time = 0; startLevel(0);
+          }
         }
+        else if (pt.y >= 161 && pt.y <= 185) { A.click(); cursor = save.unlocked; setState("select"); load(0, false); }
+        else if (pt.y >= 188 && pt.y <= 212) { A.click(); comicPage = 0; setState("lore"); }
+        else if (pt.y >= 215 && pt.y <= 239) { A.click(); showLeaderboard(); }
+        else if (pt.y >= 242 && pt.y <= 266 && typeof I18N !== "undefined") { A.click(); I18N.toggleLang(); }
       }
-      else if (pt.y >= 168 && pt.y <= 193) { A.click(); cursor = save.unlocked; setState("select"); load(0, false); }
-      else if (pt.y >= 195 && pt.y <= 220) { A.click(); comicPage = 0; setState("lore"); }
-      else if (pt.y >= 222 && pt.y <= 247) { A.click(); showLeaderboard(); }
-      else if (pt.y >= 249 && pt.y <= 274 && typeof I18N !== "undefined") { A.click(); I18N.toggleLang(); }
+    } else if (state === "select") {
+      const n = LEVELS.length, pages = Math.ceil(n / SELPER), page = Math.floor(cursor / SELPER);
+
+      // Top Back Button (generous tap target)
+      if (pt.y <= 48 && pt.x <= 110) { A.back(); setState("title"); return; }
+      // Page prev / next buttons
+      if (pt.y <= 48 && pt.x >= W - 190 && pt.x <= W - 100 && page > 0) {
+        A.move(); cursor = Math.max(0, (page - 1) * SELPER); return;
+      }
+      if (pt.y <= 48 && pt.x >= W - 98 && page < pages - 1) {
+        A.move(); cursor = Math.min(n - 1, (page + 1) * SELPER); return;
+      }
+      // Level cards are handled on pointerup so horizontal sliding doesn't trigger level selection!
     } else if (state === "lore") {
       const pages = (typeof I18N !== "undefined") ? I18N.pages : [];
       if (pt.y >= 295) {
@@ -116,6 +137,66 @@ if (typeof window !== "undefined") {
     }
   });
   const endTouch = e => {
+    const pt = getCanvasPos(e);
+    const dx = pt.x - gestureStartX;
+    const dy = pt.y - gestureStartY;
+    const dt = Date.now() - gestureStartTime;
+    const dist = Math.hypot(dx, dy);
+
+    // 1. Edge Swipe-Back (from left edge: gestureStartX < 80, dx > 45, |dy| < 80)
+    if (gestureStartX < 80 && dx > 45 && Math.abs(dy) < 80 && dt < 800) {
+      if (profileModalOpen) {
+        closeProfileModal();
+        return;
+      }
+      if (state === "select" || state === "lore" || state === "leaderboard") {
+        A.back(); setState("title"); return;
+      }
+      if (state === "pause") {
+        A.back(); setState("title"); load(0, false); return;
+      }
+      if (state === "play") {
+        setState("pause"); return;
+      }
+    }
+
+    // 2. Level Select horizontal swipe to change pages & tap to select
+    if (state === "select") {
+      const n = LEVELS.length, page = Math.floor(cursor / SELPER), pages = Math.ceil(n / SELPER);
+      if (dt < 650 && Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.1) {
+        if (dx < -35 && page < pages - 1) {
+          A.move(); cursor = Math.min(n - 1, (page + 1) * SELPER); return;
+        } else if (dx > 35 && page > 0) {
+          A.move(); cursor = Math.max(0, (page - 1) * SELPER); return;
+        }
+      }
+
+      // Tap card selection if finger didn't slide
+      if (dist < 18 && dt < 500) {
+        const cols = SELCOLS, cw = 76, ch = 66, gap = 10, x0 = (W - (cols * cw + (cols - 1) * gap)) / 2;
+        const first = page * SELPER;
+        for (let j = 0; j < SELPER && first + j < n; j++) {
+          const i = first + j, x = x0 + (j % cols) * (cw + gap), y = 58 + Math.floor(j / cols) * (ch + gap);
+          if (pt.x >= x && pt.x <= x + cw && pt.y >= y && pt.y <= y + ch) {
+            cursor = i;
+            if (cursor > save.unlocked) A.locked();
+            else { A.click(); deaths = 0; time = 0; startLevel(cursor); }
+            return;
+          }
+        }
+      }
+    }
+
+    // 3. Comic / Lore horizontal swipe to turn panels
+    if (state === "lore" && dt < 650 && Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.1) {
+      const pages = (typeof I18N !== "undefined") ? I18N.pages : [];
+      if (dx < -35 && comicPage < pages.length - 1) {
+        A.click(); comicPage++; return;
+      } else if (dx > 35 && comicPage > 0) {
+        A.click(); comicPage--; return;
+      }
+    }
+
     activeTouches.delete(e.pointerId);
     updateTouchControls();
   };
@@ -160,7 +241,47 @@ function showLeaderboard() {
   setState("leaderboard");
 }
 
-function setState(s) { state = s; if (s === "pause") A.pause(true), A.duck(true); else A.duck(false); }
+function setState(s, pushHistory = true) {
+  const prev = state;
+  state = s;
+  if (s === "pause") A.pause(true), A.duck(true); else A.duck(false);
+  if (pushHistory && typeof history !== "undefined" && history.pushState && s !== prev) {
+    try {
+      history.pushState({ screen: s }, "");
+    } catch (e) {}
+  }
+}
+
+if (typeof window !== "undefined") {
+  try {
+    if (typeof history !== "undefined" && history.replaceState) {
+      history.replaceState({ screen: "title" }, "");
+    }
+  } catch (e) {}
+
+  window.addEventListener("popstate", () => {
+    if (profileModalOpen) {
+      closeProfileModal(true);
+      return;
+    }
+    if (state === "select" || state === "lore" || state === "leaderboard") {
+      A.back();
+      setState("title", false);
+    } else if (state === "pause") {
+      A.pause(false);
+      setState("play", false);
+    } else if (state === "play") {
+      setState("pause", false);
+    } else if (state === "win" || state === "end") {
+      setState("title", false);
+      load(0, false);
+    } else if (state === "title") {
+      try {
+        history.pushState({ screen: "title" }, "");
+      } catch (e) {}
+    }
+  });
+}
 function setWorld(w) { world = w; A.setWorld(w); }
 
 function load(i, intro = true) {
@@ -322,7 +443,7 @@ function win() {
   if (ranked && typeof Leaderboard !== "undefined") {
     let totStars = 0;
     for (const k in save.best) totStars += (save.best[k].stars || 0);
-    const pname = (typeof PlayerProfile !== "undefined") ? PlayerProfile.name : "Traveler";
+    const pname = (typeof PlayerProfile !== "undefined") ? PlayerProfile.name : "Gamer";
     const pavatar = (typeof PlayerProfile !== "undefined") ? PlayerProfile.avatar : "weaver";
     const pcountry = (typeof PlayerProfile !== "undefined") ? PlayerProfile.country : "ID";
     Leaderboard.submitScore(pname, li + 1, time, deaths, totStars, pavatar, pcountry);
@@ -509,6 +630,24 @@ if (typeof Image !== "undefined") {
 
 // Profile Modal controller
 let profileModalOpen = false;
+let modalFromHistory = false;
+
+function closeProfileModal(fromPopState = false) {
+  if (typeof document === "undefined") return;
+  const modal = document.getElementById("profile-modal");
+  if (!modal) return;
+  const nameInput = document.getElementById("prof-name");
+  if (nameInput) nameInput.blur();
+  modal.style.display = "none";
+  profileModalOpen = false;
+  if (modalFromHistory && !fromPopState && typeof history !== "undefined" && history.back) {
+    modalFromHistory = false;
+    try { history.back(); } catch (e) {}
+  } else {
+    modalFromHistory = false;
+  }
+}
+
 function openProfileModal(callback) {
   if (typeof document === "undefined") return;
   const modal = document.getElementById("profile-modal");
@@ -516,21 +655,51 @@ function openProfileModal(callback) {
   profileModalOpen = true;
   modal.style.display = "flex";
 
+  if (typeof history !== "undefined" && history.pushState) {
+    try {
+      history.pushState({ modal: "profile" }, "");
+      modalFromHistory = true;
+    } catch (e) {}
+  }
+
   // Bind values
   const nameInput = document.getElementById("prof-name");
   const countrySelect = document.getElementById("prof-country");
   const avatarContainer = document.getElementById("avatar-container");
   const saveBtn = document.getElementById("btn-save-profile");
+  const closeBtn = document.getElementById("btn-close-profile");
+  const cancelBtn = document.getElementById("btn-cancel-profile");
+  const topBackBtn = document.getElementById("btn-top-back-profile");
+  const titleEl = document.getElementById("prof-title");
+  const nameLbl = document.getElementById("lbl-name");
+  const avLbl = document.getElementById("lbl-avatar");
+  const countryLbl = document.getElementById("lbl-country");
 
-  if (nameInput) nameInput.value = PlayerProfile.name || "";
+  if (typeof I18N !== "undefined") {
+    if (titleEl) titleEl.innerHTML = `<i class="bi bi-person-badge"></i> ` + (I18N.t("profileTitle") || "GAMER PROFILE");
+    if (nameLbl) nameLbl.textContent = I18N.lang === "id" ? "Nama Gamer:" : "Gamer Name:";
+    if (avLbl) avLbl.textContent = I18N.t("chooseAvatar") || "Choose Avatar:";
+    if (countryLbl) countryLbl.textContent = I18N.t("countryLabel") || "Country / Region:";
+    if (topBackBtn) topBackBtn.innerHTML = `<i class="bi bi-arrow-left"></i> ` + (I18N.lang === "id" ? "Kembali" : "Back");
+    if (cancelBtn) cancelBtn.innerHTML = `<i class="bi bi-arrow-left"></i> ` + (I18N.lang === "id" ? "Kembali" : "Back");
+    if (saveBtn) saveBtn.innerHTML = `<i class="bi bi-check-circle"></i> ` + (I18N.t("saveAndPlay") || "Save & Play");
+  }
+
+  if (nameInput) {
+    nameInput.value = PlayerProfile.name || "Gamer";
+    nameInput.onkeydown = (e) => {
+      if (e.key === "Enter") saveBtn?.click();
+    };
+  }
   if (countrySelect) countrySelect.value = PlayerProfile.country || "ID";
 
   if (avatarContainer && typeof PlayerProfile !== "undefined" && PlayerProfile.avatars) {
     avatarContainer.innerHTML = "";
     PlayerProfile.avatars.forEach(av => {
       const b = document.createElement("button");
+      b.type = "button";
       b.className = "av-btn" + (av.id === PlayerProfile.avatar ? " selected" : "");
-      b.innerHTML = `<i class="bi ${av.icon}" style="color:${av.color};font-size:22px;"></i>`;
+      b.innerHTML = `<i class="bi ${av.icon}" style="color:${av.color};font-size:20px;"></i>`;
       b.title = av.name;
       b.onclick = () => {
         PlayerProfile.avatar = av.id;
@@ -541,11 +710,24 @@ function openProfileModal(callback) {
     });
   }
 
-  saveBtn.onclick = () => {
+  modal.onclick = (e) => {
+    if (e.target === modal) closeProfileModal();
+  };
+
+  const onDismiss = (e) => {
+    if (e) e.stopPropagation();
+    closeProfileModal();
+  };
+
+  if (closeBtn) closeBtn.onclick = onDismiss;
+  if (cancelBtn) cancelBtn.onclick = onDismiss;
+  if (topBackBtn) topBackBtn.onclick = onDismiss;
+
+  saveBtn.onclick = (e) => {
+    if (e) e.stopPropagation();
     if (nameInput && nameInput.value.trim()) PlayerProfile.name = nameInput.value.trim();
     if (countrySelect) PlayerProfile.setCountry(countrySelect.value, countrySelect.options[countrySelect.selectedIndex]?.text, true);
-    modal.style.display = "none";
-    profileModalOpen = false;
+    closeProfileModal();
     if (callback) callback();
   };
 }
@@ -1239,7 +1421,7 @@ function drawTitle() {
   text(flagLabel, 72, 23, 10, "#fff");
 
   // Player Profile Pill in top-right
-  const pname = (typeof PlayerProfile !== "undefined") ? PlayerProfile.name : "Traveler";
+  const pname = (typeof PlayerProfile !== "undefined") ? PlayerProfile.name : "Gamer";
   const pav = (typeof PlayerProfile !== "undefined" && PlayerProfile.avatarObj) ? PlayerProfile.avatarObj.symbol : "✦";
   panel(W - 132, 8, 118, 22, "rgba(10,8,30,.88)", P.accent);
   text(`${pav} ${pname}`, W - 73, 23, 11, "#ffd166");
@@ -1379,21 +1561,39 @@ function drawLeaderboard() {
 const SELCOLS = 7, SELPER = 21;
 function drawSelect() {
   ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(0, 0, W, H);
-  text("SELECT LEVEL", W / 2, 46, 30, "#fff");
+  text("SELECT LEVEL", W / 2, 38, 24, "#fff");
+
+  // Top Back Button for mobile / mouse
+  panel(14, 10, 84, 30, "rgba(255,255,255,0.18)", "#ffd166");
+  text("◀ Back", 56, 30, 13, "#ffd166");
+
   const n = LEVELS.length, cols = SELCOLS, cw = 76, ch = 66, gap = 10, x0 = (W - (cols * cw + (cols - 1) * gap)) / 2;
   const page = Math.floor(cursor / SELPER), pages = Math.ceil(n / SELPER), first = page * SELPER;
   for (let j = 0; j < SELPER && first + j < n; j++) {
-    const i = first + j, x = x0 + (j % cols) * (cw + gap), y = 66 + Math.floor(j / cols) * (ch + gap), locked = i > save.unlocked, sel = i === cursor, b = save.best[i];
+    const i = first + j, x = x0 + (j % cols) * (cw + gap), y = 58 + Math.floor(j / cols) * (ch + gap), locked = i > save.unlocked, sel = i === cursor, b = save.best[i];
     const off = sel ? Math.sin(T * 8) * 1.5 - 3 : 0;
     panel(x, y + off, cw, ch, locked ? "rgba(10,8,30,.55)" : "rgba(30,25,80,.7)", sel ? "#ffd166" : "rgba(255,255,255,.2)");
     text(String(i + 1), x + cw / 2, y + off + 30, 26, locked ? "#888" : "#fff");
     if (locked) text("LOCKED", x + cw / 2, y + off + 54, 10, "#999", "center", false);
     else for (let s = 0; s < 3; s++) star(x + cw / 2 - 16 + s * 16, y + off + 50, 6, b && b.stars > s);
   }
-  if (pages > 1) text(`Page ${page + 1} / ${pages}`, W - 16, 46, 12, "#cde", "right", false);
+
+  // Page switcher buttons for touch/mobile
+  if (pages > 1) {
+    if (page > 0) {
+      panel(W - 180, 10, 76, 30, "rgba(255,255,255,0.18)", "#ffd166");
+      text("◀ Prev", W - 142, 30, 12, "#fff");
+    }
+    if (page < pages - 1) {
+      panel(W - 96, 10, 82, 30, "rgba(255,255,255,0.18)", "#ffd166");
+      text("Next ▶", W - 55, 30, 12, "#ffd166");
+    }
+    text(`Page ${page + 1}/${pages}`, W / 2, H - 42, 11, "#cde", "center", false);
+  }
+
   const sl = LEVELS[Math.min(cursor, n - 1)];
-  text(cursor > save.unlocked ? "Locked: clear the previous level" : sl.name, W / 2, H - 50, 15, "#ffd166");
-  text("Arrows: choose    Enter: play    U: unlock all    Esc: back", W / 2, H - 24, 12, "#fff", "center", false);
+  text(cursor > save.unlocked ? "Locked: clear the previous level" : sl.name, W / 2, H - 26, 13, "#ffd166");
+  text("◀ Slide / Swipe Halaman ▶   •   Tap Level untuk Main", W / 2, H - 10, 10, "rgba(255,255,255,.65)", "center", false);
 }
 function drawPause() {
   ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, H);
