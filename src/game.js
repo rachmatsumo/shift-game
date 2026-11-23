@@ -1251,41 +1251,103 @@ function drawBoss(w) {
   if (!boss || !boss.active) return;
   const bx = boss.x;
   ctx.save();
-  // Deep dark shadow tendril wall
-  const bgGrad = ctx.createLinearGradient(bx - 120, 0, bx + 40, 0);
-  bgGrad.addColorStop(0, "rgba(5, 2, 12, 0.98)");
-  bgGrad.addColorStop(0.7, "rgba(20, 6, 32, 0.88)");
-  bgGrad.addColorStop(1, "rgba(90, 10, 40, 0)");
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(bx - 300, 0, 340, H);
 
-  // Waving Void Tendrils
-  ctx.strokeStyle = w === 0 ? "rgba(220, 38, 38, 0.75)" : "rgba(139, 92, 246, 0.8)";
+  // 1. Swirling dark void fog wall
+  const bgGrad = ctx.createLinearGradient(bx - 140, 0, bx + 55, 0);
+  bgGrad.addColorStop(0, "rgba(5, 2, 12, 0.98)");
+  bgGrad.addColorStop(0.65, "rgba(22, 6, 36, 0.92)");
+  bgGrad.addColorStop(0.9, w === 0 ? "rgba(180, 20, 40, 0.35)" : "rgba(120, 30, 200, 0.35)");
+  bgGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(bx - 360, 0, 420, H);
+
+  // 2. Towering Colossus Silhouette & Spire Horns
+  ctx.fillStyle = "rgba(10, 4, 18, 0.95)";
+  ctx.beginPath();
+  ctx.moveTo(bx - 60, H);
+  ctx.lineTo(bx - 10, 80);
+  ctx.lineTo(bx + 15, 40); // Main Horn
+  ctx.lineTo(bx + 25, 95);
+  ctx.lineTo(bx + 38, 140);
+  ctx.lineTo(bx + 20, 220);
+  ctx.lineTo(bx + 35, 280);
+  ctx.lineTo(bx - 20, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Waving Segmented Void Tendrils with Ethereal Glowing Tips
+  const tendrilCol = w === 0 ? "rgba(255, 71, 87, 0.85)" : "rgba(168, 85, 247, 0.85)";
+  const glowCol = w === 0 ? "#ff4757" : "#c084fc";
   ctx.lineWidth = 4;
-  for (let i = 0; i < 6; i++) {
-    const ty = i * 60 + 20;
-    const wave = Math.sin(T * 4 + i) * 22;
+  for (let i = 0; i < 7; i++) {
+    const ty = i * 50 + 15;
+    const wave = Math.sin(T * 4.5 + i * 1.2) * 26;
+    const wave2 = Math.cos(T * 3.2 + i * 0.9) * 18;
+    ctx.strokeStyle = tendrilCol;
     ctx.beginPath();
-    ctx.moveTo(bx - 20, ty);
-    ctx.bezierCurveTo(bx + 15, ty - 15 + wave, bx + 25, ty + 15 - wave, bx + 42 + Math.cos(T * 3 + i) * 12, ty + wave * 0.5);
+    ctx.moveTo(bx - 30, ty);
+    ctx.bezierCurveTo(bx + 18, ty - 20 + wave, bx + 36, ty + 20 + wave2, bx + 58 + Math.cos(T * 3 + i) * 14, ty + wave * 0.6);
+    ctx.stroke();
+
+    // Glowing tip spark
+    ctx.fillStyle = glowCol;
+    ctx.beginPath();
+    ctx.arc(bx + 58 + Math.cos(T * 3 + i) * 14, ty + wave * 0.6, 3.5, 0, 7);
+    ctx.fill();
+  }
+
+  // 4. Arcane Crackling Lightning Sparks
+  if (Math.sin(T * 12) > 0.4) {
+    ctx.strokeStyle = w === 0 ? "#ff6b81" : "#e056fd";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const sy = 100 + Math.sin(T * 7) * 80;
+    ctx.moveTo(bx + 20, sy);
+    ctx.lineTo(bx + 40, sy - 15);
+    ctx.lineTo(bx + 35, sy - 5);
+    ctx.lineTo(bx + 60, sy - 20);
     ctx.stroke();
   }
 
-  // Giant Lurking Red / Violet Eyes
-  const eyeY1 = 130 + Math.sin(T * 2) * 6;
-  const eyeY2 = 145 + Math.cos(T * 2.2) * 6;
+  // 5. Giant Menacing Predatory Eyes with Slit Pupils & Glowing Iris Rings
+  const eyeBaseY = 135 + Math.sin(T * 2.5) * 8;
   const eyeCol = w === 0 ? "#ff0055" : "#a855f7";
+  const eyeCore = w === 0 ? "#ffdd59" : "#ffffff";
+
+  // Outer demonic aura glow
+  ctx.save();
+  ctx.shadowColor = eyeCol;
+  ctx.shadowBlur = 18;
+
+  // Eye 1 (Primary large eye)
   ctx.fillStyle = eyeCol;
   ctx.beginPath();
-  ctx.arc(bx + 15, eyeY1, 9, 0, 7);
-  ctx.arc(bx + 10, eyeY2, 7, 0, 7);
+  ctx.arc(bx + 22, eyeBaseY, 11, 0, 7);
   ctx.fill();
 
-  ctx.fillStyle = "#ffffff";
+  // Eye 2 (Upper secondary eye)
   ctx.beginPath();
-  ctx.arc(bx + 17, eyeY1, 3.5, 0, 7);
-  ctx.arc(bx + 12, eyeY2, 2.5, 0, 7);
+  ctx.arc(bx + 16, eyeBaseY - 22, 7.5, 0, 7);
   ctx.fill();
+
+  // Eye 3 (Lower tertiary eye)
+  ctx.beginPath();
+  ctx.arc(bx + 12, eyeBaseY + 24, 6, 0, 7);
+  ctx.fill();
+  ctx.restore();
+
+  // Inner bright iris & pupils
+  ctx.fillStyle = eyeCore;
+  ctx.beginPath();
+  ctx.arc(bx + 24, eyeBaseY, 4.5, 0, 7);
+  ctx.arc(bx + 18, eyeBaseY - 22, 3, 0, 7);
+  ctx.arc(bx + 14, eyeBaseY + 24, 2.2, 0, 7);
+  ctx.fill();
+
+  // Vertical slit pupil
+  ctx.fillStyle = "#110418";
+  ctx.fillRect(bx + 23.5, eyeBaseY - 6, 2, 12);
+  ctx.fillRect(bx + 17.5, eyeBaseY - 25, 1.6, 6);
 
   ctx.restore();
 }
@@ -1349,12 +1411,60 @@ function drawHud() {
     text(`★ ${shardsCollected}/${shardsTotal}`, infoX, 25, 11, shCol, "left");
   }
 
-  // Boss Warning Bar if active (positioned floating below HUD)
+  // Epic Boss Encounter HUD & Distance Meter Bar
   if (boss && boss.active) {
     const dist = Math.max(0, Math.round((player.x - boss.x) / TILE));
-    const bCol = dist < 6 ? "#ff4757" : "#ffa502";
-    panel(W / 2 - 75, 36, 150, 18, "rgba(20, 6, 32, 0.9)", bCol);
-    text(`⚠ ${boss.name}: ${dist}m`, W / 2, 49, 10, bCol);
+    const isCritical = dist < 7;
+    const isWarning = dist < 14;
+    const bCol = isCritical ? "#ff4757" : isWarning ? "#ffa502" : "#ffd166";
+    const pulse = isCritical ? Math.sin(T * 10) * 0.4 + 0.6 : 1;
+
+    // Boss Threat Bar (Obsidian Glass with glowing frame)
+    const bw = 270, bh = 28, bx0 = W / 2 - bw / 2, by0 = 36;
+    panel(bx0, by0, bw, bh, "rgba(14, 6, 24, 0.94)", isCritical ? `rgba(255, 71, 87, ${pulse})` : "rgba(255, 165, 2, 0.8)");
+
+    // Header: Boss Name in Cinzel with Skull/Rune Crest
+    const bName = boss.name.toUpperCase();
+    text(`☠  ${bName}`, bx0 + 10, by0 + 12, 10, bCol, "left", true, FONT_HEADER);
+
+    // Escape Distance Readout
+    const distText = dist <= 3 ? "CRITICAL!" : `${dist}m`;
+    text(distText, bx0 + bw - 10, by0 + 12, 10, bCol, "right", true, FONT_BODY);
+
+    // Mini Progress Meter Gauge (tracks the closing gap)
+    const gw = bw - 20, gh = 5, gx0 = bx0 + 10, gy0 = by0 + 17;
+    rr(gx0, gy0, gw, gh, 2.5);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.65)"; ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)"; ctx.lineWidth = 1; ctx.stroke();
+
+    // Fill gauge based on relative safety (clamp 0..22m)
+    const fillRatio = Math.max(0.04, Math.min(1, dist / 22));
+    const fillW = gw * fillRatio;
+    rr(gx0, gy0, fillW, gh, 2.5);
+    const gGrad = ctx.createLinearGradient(gx0, gy0, gx0 + fillW, gy0);
+    if (isCritical) {
+      gGrad.addColorStop(0, "#800020"); gGrad.addColorStop(1, "#ff4757");
+    } else if (isWarning) {
+      gGrad.addColorStop(0, "#ff4757"); gGrad.addColorStop(1, "#ffa502");
+    } else {
+      gGrad.addColorStop(0, "#ffa502"); gGrad.addColorStop(1, "#2ed573");
+    }
+    ctx.fillStyle = gGrad; ctx.fill();
+
+    // Mini markers on gauge: Boss Skull on left, Player Gem on right
+    text("☠", gx0 - 2, gy0 + 5, 8, "#ff4757", "right", false);
+    text("✦", gx0 + fillW, gy0 + 5, 8, "#fff", "center", false);
+
+    // If critical threat (< 7m), draw pulsing screen-edge danger vignette
+    if (isCritical) {
+      ctx.save();
+      const vGrad = ctx.createRadialGradient(W / 2, H / 2, H / 3, W / 2, H / 2, W * 0.7);
+      vGrad.addColorStop(0, "rgba(255, 0, 50, 0)");
+      vGrad.addColorStop(1, `rgba(255, 0, 50, ${0.28 * pulse})`);
+      ctx.fillStyle = vGrad;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
   }
 
   // Right: Deaths & Level Timer
@@ -1366,11 +1476,24 @@ function drawHud() {
 }
 function drawBanner() {
   if (banner <= 0) return;
+  const isBoss = LEVELS[li].boss;
   const t = banner, a = Math.min(1, t * 3, (2.6 - t) * 4), y = 50 + (1 - a) * -30;
-  ctx.font = "12px sans-serif"; const bw = Math.max(300, ctx.measureText(LEVELS[li].hint).width + 50);
-  ctx.globalAlpha = Math.max(0, a); panel(W / 2 - bw / 2, y, bw, 56, "rgba(10,8,30,.75)");
-  text(LEVELS[li].name, W / 2, y + 24, 20, "#fff"); text(LEVELS[li].hint, W / 2, y + 44, 12, "#cde", "center", false);
-  ctx.globalAlpha = 1;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, a);
+
+  if (isBoss) {
+    const bw = 460, bh = 64;
+    panel(W / 2 - bw / 2, y, bw, bh, "rgba(24, 6, 32, 0.94)", "#ff4757");
+    text(`☠  BOSS PURSUIT: ${LEVELS[li].bossName || LEVELS[li].name}  ☠`, W / 2, y + 26, 17, "#ff4757", "center", true, FONT_TITLE);
+    text("RUN! Shift worlds, leap across chasms, and reach the Runic Gate!", W / 2, y + 48, 11, "#ffd166", "center", true, FONT_HEADER);
+  } else {
+    ctx.font = `12px ${FONT_BODY}`;
+    const bw = Math.max(300, ctx.measureText(LEVELS[li].hint).width + 50);
+    panel(W / 2 - bw / 2, y, bw, 56, "rgba(10,8,30,.8)", "#ffd166");
+    text(LEVELS[li].name, W / 2, y + 24, 20, "#fff", "center", true, FONT_HEADER);
+    text(LEVELS[li].hint, W / 2, y + 44, 12, "#cde", "center", false, FONT_BODY);
+  }
+  ctx.restore();
 }
 function drawToast() {
   if (msgT <= 0) return;
