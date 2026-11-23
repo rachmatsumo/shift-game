@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#090614">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-touch-fullscreen" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="author" content="github.com/rachmatsumo">
 <meta name="description" content="SHIFT: The Twilight Weaver - a handcrafted puzzle-platformer where every shift swaps the world, the gravity, and time itself. Crafted for GitHub Game Off 2026.">
@@ -39,7 +40,7 @@
   canvas{width:100%;height:100%;background:#000;display:block;touch-action:none}
 
   /* On mobile touch devices in landscape mode: stretch canvas 100% full screen to eliminate black pillarbox borders */
-  @media (max-height: 500px), (pointer: coarse) and (orientation: landscape) {
+  @media (max-height: 650px), (pointer: coarse) and (orientation: landscape) {
     #game-wrap {
       max-width: 100vw !important;
       max-height: 100vh !important;
@@ -123,8 +124,17 @@
   <canvas id="c" width="1920" height="1080"></canvas>
 </div>
 <script>
+window.deferredPWAInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  window.deferredPWAInstall = e;
+});
+window.addEventListener('appinstalled', () => {
+  window.deferredPWAInstall = null;
+});
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=10').then(reg => {
+  navigator.serviceWorker.register('./sw.js?v=11').then(reg => {
     reg.update();
   }).catch(()=>{});
   let refreshing = false;
@@ -136,11 +146,11 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
-<script src="src/i18n.js?v=10"></script>
-<script src="src/profile.js?v=10"></script>
-<script src="src/leaderboard.js?v=10"></script>
-<script src="src/levels.js?v=10"></script>
-<script src="src/audio.js?v=10"></script>
-<script src="src/game.js?v=10"></script>
+<script src="src/i18n.js?v=11"></script>
+<script src="src/profile.js?v=11"></script>
+<script src="src/leaderboard.js?v=11"></script>
+<script src="src/levels.js?v=11"></script>
+<script src="src/audio.js?v=11"></script>
+<script src="src/game.js?v=11"></script>
 </body>
 </html>

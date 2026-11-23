@@ -1,4 +1,4 @@
-const CACHE_NAME = "shift-v10";
+const CACHE_NAME = "shift-v11";
 const ASSETS = [
   "./",
   "./index.html",

@@ -58,7 +58,20 @@ addEventListener("keydown", e => {
   keys[e.code] = true; A.init();
 });
 addEventListener("keyup", e => { keysRaw[e.code] = false; keys[e.code] = false; });
-addEventListener("blur", () => { for (const k in keys) keys[k] = false; if (state === "play") setState("pause"); });
+addEventListener("blur", () => {
+  for (const k in keys) keys[k] = false;
+  if (state === "play" && typeof document !== "undefined" && document.hidden) {
+    setState("pause");
+  }
+});
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && state === "play") {
+      for (const k in keys) keys[k] = false;
+      setState("pause");
+    }
+  });
+}
 
 let gestureStartX = 0, gestureStartY = 0, gestureStartTime = 0;
 if (typeof window !== "undefined") {
@@ -80,28 +93,61 @@ if (typeof window !== "undefined") {
       else if (Math.hypot(pt.x - (W - 64), pt.y - 18) < 16) toggleFullscreen();
       else if (Math.hypot(pt.x - (W - 100), pt.y - 18) < 16 && state === "play") restart();
       else if (Math.hypot(pt.x - (W - 136), pt.y - 18) < 16 && state === "play") { A.click(); setState("title"); load(0, false); }
+      else if (Math.hypot(pt.x - (W - 172), pt.y - 18) < 16 && state === "play") { A.click(); setState("pause"); return; }
     }
     if (state === "title") {
       // Check top badges
       if (pt.y <= 36 && pt.x >= W - 140) { A.click(); openProfileModal(); return; }
       if (pt.y <= 36 && pt.x <= 130 && typeof I18N !== "undefined") { A.click(); I18N.toggleLang(); return; }
+      if (pt.y <= 36 && Math.abs(pt.x - W / 2) < 65) {
+        A.click();
+        if (typeof window !== "undefined" && window.deferredPWAInstall) {
+          window.deferredPWAInstall.prompt();
+          window.deferredPWAInstall.userChoice.then(() => { window.deferredPWAInstall = null; });
+        } else {
+          toggleFullscreen();
+        }
+        return;
+      }
 
       // Check menu button clicks: only trigger when clicking INSIDE the menu panel horizontal bounds
       const inMenuX = pt.x >= (W / 2 - 145) && pt.x <= (W / 2 + 145);
       if (inMenuX) {
         if (pt.y >= 134 && pt.y <= 158) {
           A.click();
+          if (isTouchDevice || hasTouch) enterFullscreen();
           if (typeof PlayerProfile !== "undefined" && !PlayerProfile.isConfigured) {
             openProfileModal(() => { deaths = 0; time = 0; startLevel(0); });
           } else {
             deaths = 0; time = 0; startLevel(0);
           }
         }
-        else if (pt.y >= 161 && pt.y <= 185) { A.click(); cursor = save.unlocked; setState("select"); load(0, false); }
+        else if (pt.y >= 161 && pt.y <= 185) { A.click(); if (isTouchDevice || hasTouch) enterFullscreen(); cursor = save.unlocked; setState("select"); load(0, false); }
         else if (pt.y >= 188 && pt.y <= 212) { A.click(); comicPage = 0; setState("lore"); }
         else if (pt.y >= 215 && pt.y <= 239) { A.click(); showLeaderboard(); }
         else if (pt.y >= 242 && pt.y <= 266 && typeof I18N !== "undefined") { A.click(); I18N.toggleLang(); }
       }
+    } else if (state === "pause") {
+      const px = W / 2 - 135, py = 50, pw = 270, ph = 245;
+      const inClose = pt.x >= px + pw - 34 && pt.x <= px + pw - 4 && pt.y >= py + 6 && pt.y <= py + 36;
+      const outside = pt.x < px || pt.x > px + pw || pt.y < py || pt.y > py + ph;
+      if (inClose || outside) {
+        A.click(); A.pause(false); setState("play"); return;
+      }
+      if (pt.x >= px + 16 && pt.x <= px + pw - 16) {
+        if (pt.y >= py + 48 && pt.y <= py + 78) { // Resume
+          A.click(); A.pause(false); setState("play"); return;
+        } else if (pt.y >= py + 83 && pt.y <= py + 113) { // Restart
+          A.click(); A.pause(false); setState("play"); restart(); return;
+        } else if (pt.y >= py + 118 && pt.y <= py + 148) { // Level Select
+          A.click(); A.pause(false); cursor = li; setState("select"); return;
+        } else if (pt.y >= py + 153 && pt.y <= py + 183) { // Sound toggle
+          A.toggleMute(); return;
+        } else if (pt.y >= py + 188 && pt.y <= py + 218) { // Main Menu
+          A.click(); A.pause(false); setState("title"); load(0, false); return;
+        }
+      }
+      return;
     } else if (state === "select") {
       const n = LEVELS.length, pages = Math.ceil(n / SELPER), page = Math.floor(cursor / SELPER);
 
@@ -156,7 +202,7 @@ if (typeof window !== "undefined") {
       if (state === "pause") {
         A.back(); setState("title"); load(0, false); return;
       }
-      if (state === "play") {
+      if (state === "play" && gestureStartY < 60) {
         setState("pause"); return;
       }
     }
@@ -205,13 +251,32 @@ if (typeof window !== "undefined") {
   addEventListener("pointercancel", endTouch);
 }
 
+function enterFullscreen() {
+  if (typeof document === "undefined") return;
+  const el = document.documentElement;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (req) {
+      try {
+        const p = req.call(el, { navigationUI: "hide" });
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
+  }
+  if (typeof screen !== "undefined" && screen.orientation && screen.orientation.lock) {
+    try { screen.orientation.lock("landscape").catch(() => {}); } catch (e) {}
+  }
+}
+
 function toggleFullscreen() {
   if (typeof document === "undefined") return;
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    const el = document.documentElement;
-    (el.requestFullscreen || el.webkitRequestFullscreen || function(){}).call(el);
+    enterFullscreen();
   } else {
-    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (exit) {
+      try { exit.call(document); } catch (e) {}
+    }
   }
 }
 
@@ -440,7 +505,12 @@ function doShift() {
   prevWorld = world; shiftT = 1; shiftX = p.x + 11; shiftY = p.y + 14 + OFFY;
   setWorld(nw); flash = .12; A.shift(nw); burst(shiftX, shiftY - OFFY, PAL[nw].mine, 14);
 }
-function startLevel(i) { load(i); time = i === 0 ? 0 : time; setState("play"); }
+function startLevel(i) {
+  load(i);
+  time = i === 0 ? 0 : time;
+  setState("play");
+  if (isTouchDevice || hasTouch) enterFullscreen();
+}
 function win() {
   A.win(); burst(player.x + 11, player.y + 14, "#ffd166", 36);
   winStars = levelDeaths === 0 ? 3 : levelDeaths <= 3 ? 2 : 1; winT = 0;
@@ -1420,6 +1490,7 @@ function drawTouchControls() {
   text("JUMP", W - 45, H - 38, 14, keys["Space"] ? "#ffd166" : "#fff");
 
   // Top Utility Bar Quick Touch Icons (Using geometric vector symbols instead of emojis)
+  panel(W - 188, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text("⏸", W - 172, 22, 14, "#fff"); // Pause
   panel(W - 152, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text("⌂", W - 136, 22, 16, "#fff"); // Home
   panel(W - 116, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text("↻", W - 100, 22, 16, "#fff"); // Restart
   panel(W - 80, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text("⛶", W - 64, 22, 14, "#fff"); // Fullscreen
@@ -1519,7 +1590,7 @@ function drawHud() {
   }
 
   // Right: Deaths & Level Timer
-  const statOff = (isTouchDevice || hasTouch) ? 160 : 16;
+  const statOff = (isTouchDevice || hasTouch) ? 198 : 16;
   text(`Deaths: ${deaths}`, W - statOff - 65, 25, 11, "#cbd5e1", "right");
   text(levelTime.toFixed(1) + "s", W - statOff, 25, 12, "#fff", "right");
 
@@ -1597,6 +1668,15 @@ function drawTitle() {
   panel(14, 8, 108, 22, "rgba(10,8,30,.88)", "#ffd166");
   drawFlag(curLang, 28, 19, 18, 11);
   text(flagLabel, 72, 23, 10, "#fff", "center", true, FONT_HEADER);
+
+  // Fullscreen / PWA Install Badge in top-center
+  if (typeof window !== "undefined" && window.deferredPWAInstall) {
+    panel(W / 2 - 62, 8, 124, 22, "rgba(0, 206, 201, 0.25)", "#00cec9");
+    text("📲 INSTALL PWA", W / 2, 23, 10, "#00cec9", "center", true, FONT_HEADER);
+  } else if (isTouchDevice || hasTouch) {
+    panel(W / 2 - 58, 8, 116, 22, "rgba(255, 255, 255, 0.12)", "rgba(255, 255, 255, 0.3)");
+    text("⛶ FULLSCREEN", W / 2, 23, 10, "#ffd166", "center", true, FONT_HEADER);
+  }
 
   // Player Profile Pill in top-right
   const pname = (typeof PlayerProfile !== "undefined") ? PlayerProfile.name : "Gamer";
@@ -1774,17 +1854,33 @@ function drawSelect() {
   text("◀ Slide / Swipe Halaman ▶   •   Tap Level untuk Main", W / 2, H - 10, 10, "rgba(255,255,255,.65)", "center", false);
 }
 function drawPause() {
-  ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, H);
-  panel(W / 2 - 130, 80, 260, 190); text("PAUSED", W / 2, 116, 26, "#fff", "center", true, FONT_HEADER);
-  [
-    ["P / ESC", "Resume Game"],
-    ["R", "Restart Level"],
-    ["Q", "Level Select"],
-    ["X", "Quit to Main Menu"],
-    ["M", A.muted ? "Sound: off" : "Sound: on"]
-  ].forEach(([k, l], i) => {
-    keycap(k, W / 2 - 105, 146 + i * 23, 44); text(l, W / 2 - 50, 146 + i * 23, 13, "#fff", "left");
+  ctx.fillStyle = "rgba(4, 2, 12, 0.78)"; ctx.fillRect(0, 0, W, H);
+  const px = W / 2 - 135, py = 46, pw = 270, ph = 250;
+  panel(px, py, pw, ph, "rgba(18, 12, 38, 0.96)", "#ffd166");
+  text("PAUSED", W / 2, py + 30, 24, "#ffd166", "center", true, FONT_HEADER);
+
+  // Close [✕] button at top-right of panel
+  panel(px + pw - 30, py + 10, 20, 20, "rgba(255,255,255,0.12)", "rgba(255,255,255,0.3)");
+  text("✕", px + pw - 20, py + 25, 12, "#fff", "center", false);
+
+  const pauseButtons = [
+    { key: "P / ESC", label: "▶  Resume Game", primary: true },
+    { key: "R", label: "↻  Restart Level" },
+    { key: "Q", label: "◫  Level Select" },
+    { key: "M", label: A.muted ? "♪  Sound: OFF" : "♪  Sound: ON" },
+    { key: "X", label: "⌂  Main Menu" }
+  ];
+
+  pauseButtons.forEach((b, i) => {
+    const by = py + 46 + i * 35;
+    const bg = b.primary ? "rgba(0, 206, 201, 0.22)" : "rgba(255, 255, 255, 0.08)";
+    const border = b.primary ? "#00cec9" : "rgba(255, 255, 255, 0.2)";
+    panel(px + 16, by, pw - 32, 28, bg, border);
+    keycap(b.key, px + 24, by + 18, 38);
+    text(b.label, px + 70, by + 19, 12, b.primary ? "#00cec9" : "#fff", "left", true, FONT_HEADER);
   });
+
+  text("Tap opsi di atas atau luar kotak untuk lanjut", W / 2, py + ph - 10, 9.5, "rgba(255,255,255,0.55)", "center", false);
 }
 function drawWin(final) {
   ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, H);
@@ -1881,6 +1977,7 @@ function menuInput() {
     if (hit("Escape", "KeyP", "Space")) { A.pause(false); setState("play"); }
     if (hit("KeyR")) { setState("play"); restart(); }
     if (hit("KeyQ")) { A.back(); cursor = li; setState("select"); }
+    if (hit("KeyM")) { A.toggleMute(); }
     if (hit("KeyX")) { A.back(); setState("title"); load(0, false); }
   } else if (state === "win") {
     if (winT > .3 && hit("Space", "Enter")) { A.click(); startLevel(li + 1); }
