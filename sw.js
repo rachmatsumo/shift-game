@@ -1,4 +1,4 @@
-const CACHE_NAME = "shift-v11";
+const CACHE_NAME = "shift-v12";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,6 +9,8 @@ const ASSETS = [
   "./src/game.js",
   "./src/levels.js",
   "./src/audio.js",
+  "./assets/fonts/bootstrap-icons.min.css",
+  "./assets/fonts/bootstrap-icons.woff2",
   "./assets/audio/Amber_Light_Through_Bamboo.mp3",
   "./assets/audio/The_Sunlight_Between_Boughs.mp3",
   "./assets/audio/Beyond_The_Willow_Gate.mp3",

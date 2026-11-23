@@ -690,9 +690,44 @@ function panel(x, y, w, h, fill = "rgba(14, 9, 32, .82)", stroke = "rgba(255, 25
   ctx.beginPath(); ctx.moveTo(x + 8, y + 1.5); ctx.lineTo(x + w - 8, y + 1.5); ctx.stroke();
   ctx.restore();
 }
-const FONT_TITLE = '"Cinzel Decorative", "Cinzel", "Times New Roman", serif';
-const FONT_HEADER = '"Cinzel", "Outfit", "Georgia", serif';
-const FONT_BODY = '"Outfit", "Trebuchet MS", sans-serif';
+const FONT_TITLE = '"Cinzel Decorative", "Cinzel", "bootstrap-icons", "Times New Roman", serif';
+const FONT_HEADER = '"Cinzel", "bootstrap-icons", "Outfit", "Georgia", serif';
+const FONT_BODY = '"Outfit", "bootstrap-icons", "Trebuchet MS", sans-serif';
+const FONT_ICON = '"bootstrap-icons"';
+
+const BI = {
+  pause: "\uf4c3",
+  play: "\uf4f4",
+  restart: "\uf130",
+  fullscreen: "\uf3df",
+  fullscreenExit: "\uf3de",
+  home: "\uf422",
+  soundOn: "\uf610",
+  soundOff: "\uf60c",
+  close: "\uf659",
+  phone: "\uf4e7",
+  download: "\uf30a",
+  grid: "\uf3fb",
+  arrowLeft: "\uf12f",
+  arrowRight: "\uf138",
+  chevronLeft: "\uf284",
+  chevronRight: "\uf285",
+  danger: "\uf33b",
+};
+
+function biIcon(glyph, x, y, size = 16, col = "#fff", align = "center", shadow = true) {
+  ctx.save();
+  ctx.font = `${size}px ${FONT_ICON}`;
+  ctx.textAlign = align;
+  ctx.textBaseline = "middle";
+  if (shadow) {
+    ctx.fillStyle = "rgba(0,0,0,.65)";
+    ctx.fillText(glyph, x + 1, y + 1);
+  }
+  ctx.fillStyle = col;
+  ctx.fillText(glyph, x, y);
+  ctx.restore();
+}
 
 if (typeof document !== "undefined" && document.fonts) {
   document.fonts.ready.then(() => {
@@ -1479,8 +1514,8 @@ function drawTouchControls() {
   ctx.save();
   // D-Pad Left / Right
   panel(12, H - 76, 128, 62, "rgba(20, 15, 38, 0.65)", "rgba(255, 255, 255, 0.3)");
-  text("◀", 44, H - 38, 26, keys["ArrowLeft"] ? "#ffd166" : "#fff");
-  text("▶", 108, H - 38, 26, keys["ArrowRight"] ? "#ffd166" : "#fff");
+  biIcon(BI.arrowLeft, 44, H - 45, 24, keys["ArrowLeft"] ? "#ffd166" : "#fff");
+  biIcon(BI.arrowRight, 108, H - 45, 24, keys["ArrowRight"] ? "#ffd166" : "#fff");
 
   // Action Buttons: SHIFT and JUMP
   panel(W - 152, H - 76, 62, 62, "rgba(20, 15, 38, 0.65)", "rgba(0, 206, 201, 0.5)");
@@ -1489,12 +1524,13 @@ function drawTouchControls() {
   panel(W - 78, H - 76, 66, 62, "rgba(20, 15, 38, 0.65)", "rgba(255, 209, 102, 0.5)");
   text("JUMP", W - 45, H - 38, 14, keys["Space"] ? "#ffd166" : "#fff");
 
-  // Top Utility Bar Quick Touch Icons (Using geometric vector symbols instead of emojis)
-  panel(W - 188, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text("⏸", W - 172, 22, 14, "#fff"); // Pause
-  panel(W - 152, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text("⌂", W - 136, 22, 16, "#fff"); // Home
-  panel(W - 116, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text("↻", W - 100, 22, 16, "#fff"); // Restart
-  panel(W - 80, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text("⛶", W - 64, 22, 14, "#fff"); // Fullscreen
-  panel(W - 44, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); text(A.muted ? "✕" : "♪", W - 28, 22, 14, "#fff"); // Audio
+  // Top Utility Bar Quick Touch Icons with crisp Bootstrap Icons
+  const isFs = typeof document !== "undefined" && (document.fullscreenElement || document.webkitFullscreenElement);
+  panel(W - 188, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.pause, W - 172, 17, 13, "#fff"); // Pause
+  panel(W - 152, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.home, W - 136, 17, 14, "#fff"); // Home
+  panel(W - 116, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.restart, W - 100, 17, 14, "#fff"); // Restart
+  panel(W - 80, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(isFs ? BI.fullscreenExit : BI.fullscreen, W - 64, 17, 13, "#fff"); // Fullscreen
+  panel(W - 44, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(A.muted ? BI.soundOff : BI.soundOn, W - 28, 17, 14, "#fff"); // Audio
   ctx.restore();
 }
 
@@ -1545,9 +1581,10 @@ function drawHud() {
     const bw = 270, bh = 28, bx0 = W / 2 - bw / 2, by0 = 36;
     panel(bx0, by0, bw, bh, "rgba(14, 6, 24, 0.94)", isCritical ? `rgba(255, 71, 87, ${pulse})` : "rgba(255, 165, 2, 0.8)");
 
-    // Header: Boss Name in Cinzel with Skull/Rune Crest
+    // Header: Boss Name in Cinzel with Threat Crest
     const bName = boss.name.toUpperCase();
-    text(`☠  ${bName}`, bx0 + 10, by0 + 12, 10, bCol, "left", true, FONT_HEADER);
+    biIcon(BI.danger, bx0 + 12, by0 + 11, 10, bCol, "left");
+    text(bName, bx0 + 26, by0 + 12, 10, bCol, "left", true, FONT_HEADER);
 
     // Escape Distance Readout
     const distText = dist <= 3 ? "CRITICAL!" : `${dist}m`;
@@ -1573,9 +1610,9 @@ function drawHud() {
     }
     ctx.fillStyle = gGrad; ctx.fill();
 
-    // Mini markers on gauge: Boss Skull on left, Player Gem on right
-    text("☠", gx0 - 2, gy0 + 5, 8, "#ff4757", "right", false);
-    text("✦", gx0 + fillW, gy0 + 5, 8, "#fff", "center", false);
+    // Mini markers on gauge: Boss Danger on left, Player on right
+    biIcon(BI.danger, gx0 - 3, gy0 + 2.5, 7, "#ff4757", "right");
+    biIcon(BI.play, gx0 + fillW, gy0 + 2.5, 7, "#fff", "center");
 
     // If critical threat (< 7m), draw pulsing screen-edge danger vignette
     if (isCritical) {
@@ -1606,7 +1643,9 @@ function drawBanner() {
   if (isBoss) {
     const bw = 460, bh = 64;
     panel(W / 2 - bw / 2, y, bw, bh, "rgba(24, 6, 32, 0.94)", "#ff4757");
-    text(`☠  BOSS PURSUIT: ${LEVELS[li].bossName || LEVELS[li].name}  ☠`, W / 2, y + 26, 17, "#ff4757", "center", true, FONT_TITLE);
+    biIcon(BI.danger, W / 2 - 195, y + 25, 15, "#ff4757");
+    text(`BOSS PURSUIT: ${LEVELS[li].bossName || LEVELS[li].name}`, W / 2, y + 26, 17, "#ff4757", "center", true, FONT_TITLE);
+    biIcon(BI.danger, W / 2 + 195, y + 25, 15, "#ff4757");
     text("RUN! Shift worlds, leap across chasms, and reach the Runic Gate!", W / 2, y + 48, 11, "#ffd166", "center", true, FONT_HEADER);
   } else {
     ctx.font = `12px ${FONT_BODY}`;
@@ -1671,11 +1710,13 @@ function drawTitle() {
 
   // Fullscreen / PWA Install Badge in top-center
   if (typeof window !== "undefined" && window.deferredPWAInstall) {
-    panel(W / 2 - 62, 8, 124, 22, "rgba(0, 206, 201, 0.25)", "#00cec9");
-    text("📲 INSTALL PWA", W / 2, 23, 10, "#00cec9", "center", true, FONT_HEADER);
+    panel(W / 2 - 68, 8, 136, 22, "rgba(0, 206, 201, 0.25)", "#00cec9");
+    biIcon(BI.download, W / 2 - 50, 19, 12, "#00cec9");
+    text("INSTALL APP", W / 2 + 10, 23, 10, "#00cec9", "center", true, FONT_HEADER);
   } else if (isTouchDevice || hasTouch) {
-    panel(W / 2 - 58, 8, 116, 22, "rgba(255, 255, 255, 0.12)", "rgba(255, 255, 255, 0.3)");
-    text("⛶ FULLSCREEN", W / 2, 23, 10, "#ffd166", "center", true, FONT_HEADER);
+    panel(W / 2 - 68, 8, 136, 22, "rgba(255, 255, 255, 0.12)", "rgba(255, 255, 255, 0.3)");
+    biIcon(BI.fullscreen, W / 2 - 50, 19, 12, "#ffd166");
+    text("FULLSCREEN", W / 2 + 10, 23, 10, "#ffd166", "center", true, FONT_HEADER);
   }
 
   // Player Profile Pill in top-right
@@ -1756,14 +1797,17 @@ function drawComic() {
   // Navigation Buttons
   if (comicPage > 0) {
     panel(W / 2 - 200, 302, 90, 24, "rgba(255,255,255,0.12)", "#ffd166");
-    text("◀ Prev", W / 2 - 155, 318, 11, "#fff", "center", true, FONT_HEADER);
+    biIcon(BI.chevronLeft, W / 2 - 184, 314, 11, "#fff");
+    text("Prev", W / 2 - 150, 318, 11, "#fff", "center", true, FONT_HEADER);
   }
   if (comicPage < pages.length - 1) {
-    panel(W / 2 + 110, 302, 90, 24, "rgba(255,255,255,0.12)", "#ffd166");
-    text("Next ▶", W / 2 + 155, 318, 11, "#ffd166", "center", true, FONT_HEADER);
+    panel(W / 2 + 110, 90, 24, "rgba(255,255,255,0.12)", "#ffd166");
+    text("Next", W / 2 + 148, 318, 11, "#ffd166", "center", true, FONT_HEADER);
+    biIcon(BI.chevronRight, W / 2 + 182, 314, 11, "#ffd166");
   } else {
-    panel(W / 2 + 90, 302, 110, 24, "rgba(46, 204, 113, 0.3)", "#2ecc71");
-    text("Start Playing ▶", W / 2 + 145, 318, 11, "#2ecc71", "center", true, FONT_HEADER);
+    panel(W / 2 + 90, 302, 114, 24, "rgba(46, 204, 113, 0.3)", "#2ecc71");
+    text("Start Playing", W / 2 + 140, 318, 11, "#2ecc71", "center", true, FONT_HEADER);
+    biIcon(BI.play, W / 2 + 192, 314, 11, "#2ecc71");
   }
 
   panel(W / 2 - 50, 302, 100, 24, "rgba(255,255,255,0.08)", "rgba(255,255,255,0.2)");
@@ -1823,7 +1867,8 @@ function drawSelect() {
 
   // Top Back Button for mobile / mouse
   panel(14, 10, 84, 30, "rgba(255,255,255,0.18)", "#ffd166");
-  text("◀ Back", 56, 30, 13, "#ffd166", "center", true, FONT_HEADER);
+  biIcon(BI.chevronLeft, 28, 25, 13, "#ffd166");
+  text("Back", 60, 30, 13, "#ffd166", "center", true, FONT_HEADER);
 
   const n = LEVELS.length, cols = SELCOLS, cw = 76, ch = 66, gap = 10, x0 = (W - (cols * cw + (cols - 1) * gap)) / 2;
   const page = Math.floor(cursor / SELPER), pages = Math.ceil(n / SELPER), first = page * SELPER;
@@ -1840,18 +1885,20 @@ function drawSelect() {
   if (pages > 1) {
     if (page > 0) {
       panel(W - 180, 10, 76, 30, "rgba(255,255,255,0.18)", "#ffd166");
-      text("◀ Prev", W - 142, 30, 12, "#fff", "center", true, FONT_HEADER);
+      biIcon(BI.chevronLeft, W - 168, 25, 12, "#fff");
+      text("Prev", W - 138, 30, 12, "#fff", "center", true, FONT_HEADER);
     }
     if (page < pages - 1) {
       panel(W - 96, 10, 82, 30, "rgba(255,255,255,0.18)", "#ffd166");
-      text("Next ▶", W - 55, 30, 12, "#ffd166", "center", true, FONT_HEADER);
+      text("Next", W - 62, 30, 12, "#ffd166", "center", true, FONT_HEADER);
+      biIcon(BI.chevronRight, W - 34, 25, 12, "#ffd166");
     }
     text(`Page ${page + 1}/${pages}`, W / 2, H - 42, 11, "#cde", "center", false);
   }
 
   const sl = LEVELS[Math.min(cursor, n - 1)];
   text(cursor > save.unlocked ? "Locked: clear the previous level" : sl.name, W / 2, H - 26, 13, "#ffd166", "center", true, FONT_HEADER);
-  text("◀ Slide / Swipe Halaman ▶   •   Tap Level untuk Main", W / 2, H - 10, 10, "rgba(255,255,255,.65)", "center", false);
+  text("Slide / Swipe Halaman   •   Tap Level untuk Main", W / 2, H - 10, 10, "rgba(255,255,255,.65)", "center", false);
 }
 function drawPause() {
   ctx.fillStyle = "rgba(4, 2, 12, 0.78)"; ctx.fillRect(0, 0, W, H);
@@ -1861,14 +1908,14 @@ function drawPause() {
 
   // Close [✕] button at top-right of panel
   panel(px + pw - 30, py + 10, 20, 20, "rgba(255,255,255,0.12)", "rgba(255,255,255,0.3)");
-  text("✕", px + pw - 20, py + 25, 12, "#fff", "center", false);
+  biIcon(BI.close, px + pw - 20, py + 20, 12, "#fff");
 
   const pauseButtons = [
-    { key: "P / ESC", label: "▶  Resume Game", primary: true },
-    { key: "R", label: "↻  Restart Level" },
-    { key: "Q", label: "◫  Level Select" },
-    { key: "M", label: A.muted ? "♪  Sound: OFF" : "♪  Sound: ON" },
-    { key: "X", label: "⌂  Main Menu" }
+    { key: "P / ESC", icon: BI.play, label: "Resume Game", primary: true },
+    { key: "R", icon: BI.restart, label: "Restart Level" },
+    { key: "Q", icon: BI.grid, label: "Level Select" },
+    { key: "M", icon: A.muted ? BI.soundOff : BI.soundOn, label: A.muted ? "Sound: OFF" : "Sound: ON" },
+    { key: "X", icon: BI.home, label: "Main Menu" }
   ];
 
   pauseButtons.forEach((b, i) => {
@@ -1877,7 +1924,8 @@ function drawPause() {
     const border = b.primary ? "#00cec9" : "rgba(255, 255, 255, 0.2)";
     panel(px + 16, by, pw - 32, 28, bg, border);
     keycap(b.key, px + 24, by + 18, 38);
-    text(b.label, px + 70, by + 19, 12, b.primary ? "#00cec9" : "#fff", "left", true, FONT_HEADER);
+    biIcon(b.icon, px + 76, by + 14, 13, b.primary ? "#00cec9" : "#ffd166");
+    text(b.label, px + 92, by + 19, 12, b.primary ? "#00cec9" : "#fff", "left", true, FONT_HEADER);
   });
 
   text("Tap opsi di atas atau luar kotak untuk lanjut", W / 2, py + ph - 10, 9.5, "rgba(255,255,255,0.55)", "center", false);

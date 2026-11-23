@@ -32,7 +32,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700;800;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="assets/fonts/bootstrap-icons.min.css">
 <title>SHIFT - Game Off 2026</title>
 <style>
   html,body{margin:0;padding:0;width:100%;height:100%;background:#090614;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Outfit',sans-serif}
@@ -134,7 +134,7 @@ window.addEventListener('appinstalled', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=11').then(reg => {
+  navigator.serviceWorker.register('./sw.js?v=12').then(reg => {
     reg.update();
   }).catch(()=>{});
   let refreshing = false;
@@ -146,11 +146,11 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
-<script src="src/i18n.js?v=11"></script>
-<script src="src/profile.js?v=11"></script>
-<script src="src/leaderboard.js?v=11"></script>
-<script src="src/levels.js?v=11"></script>
-<script src="src/audio.js?v=11"></script>
-<script src="src/game.js?v=11"></script>
+<script src="src/i18n.js?v=12"></script>
+<script src="src/profile.js?v=12"></script>
+<script src="src/leaderboard.js?v=12"></script>
+<script src="src/levels.js?v=12"></script>
+<script src="src/audio.js?v=12"></script>
+<script src="src/game.js?v=12"></script>
 </body>
 </html>
