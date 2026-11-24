@@ -1,4 +1,4 @@
-const CACHE_NAME = "shift-v14";
+const CACHE_NAME = "shift-v15";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,6 +15,10 @@ const ASSETS = [
   "./assets/tile_ground_night.png",
   "./assets/tile_block_day.png",
   "./assets/tile_block_night.png",
+  "./assets/tile_slide_day.png",
+  "./assets/tile_slide_night.png",
+  "./assets/mover_platform_day.png",
+  "./assets/mover_platform_night.png",
   "./assets/spikes_floor_day.png",
   "./assets/spikes_floor_night.png",
   "./assets/spikes_ceiling.png",

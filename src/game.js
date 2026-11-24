@@ -53,6 +53,7 @@ function updateTouchControls() {
 addEventListener("keydown", e => {
   if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
   if (e.code === "KeyF") toggleFullscreen();
+  if (e.code === "KeyM" && !e.repeat) A.toggleMute();
   keysRaw[e.code] = true;
   if (!keys[e.code] && !e.repeat) pressed[e.code] = true;
   keys[e.code] = true; A.init();
@@ -855,12 +856,14 @@ function worldIcon(w, x, y, r) {
   }
 }
 
-// Comic & Boss asset preloading
+// Comic, Boss & Tile asset preloading
 const comicImages = [];
 let comicPage = 0;
 let bossColossusImg = null;
 const tileGroundImg = [null, null];
 const tileBlockImg = { day: null, night: null };
+const tileSlideImg = { day: null, night: null };
+const moverPlatformImg = { day: null, night: null };
 const spikesImg = { floorDay: null, floorNight: null, ceiling: null };
 if (typeof Image !== "undefined") {
   [1, 2, 3, 4, 5].forEach(num => {
@@ -873,6 +876,10 @@ if (typeof Image !== "undefined") {
   tileGroundImg[1] = new Image(); tileGroundImg[1].src = "assets/tile_ground_night.png";
   tileBlockImg.day = new Image(); tileBlockImg.day.src = "assets/tile_block_day.png";
   tileBlockImg.night = new Image(); tileBlockImg.night.src = "assets/tile_block_night.png";
+  tileSlideImg.day = new Image(); tileSlideImg.day.src = "assets/tile_slide_day.png";
+  tileSlideImg.night = new Image(); tileSlideImg.night.src = "assets/tile_slide_night.png";
+  moverPlatformImg.day = new Image(); moverPlatformImg.day.src = "assets/mover_platform_day.png";
+  moverPlatformImg.night = new Image(); moverPlatformImg.night.src = "assets/mover_platform_night.png";
   spikesImg.floorDay = new Image(); spikesImg.floorDay.src = "assets/spikes_floor_day.png";
   spikesImg.floorNight = new Image(); spikesImg.floorNight.src = "assets/spikes_floor_night.png";
   spikesImg.ceiling = new Image(); spikesImg.ceiling.src = "assets/spikes_ceiling.png";
@@ -1255,18 +1262,23 @@ function drawTiles(w) {
       ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(x + 14, y + 5, 4, 22);
     }
 
-    // Sliding Purple Blocks
+    // Sliding Purple / Arcane Kinetic Blocks
     if (t === "M") {
       const bx = x + (slideAnim[r + "_" + c] || 0);
-      const mcol = w ? ["#e056fd", "#68139a"] : ["#9b5de5", "#4a1985"];
-      // Base shadow & block
-      ctx.fillStyle = mcol[1]; ctx.fillRect(bx, y, TILE, TILE);
-      ctx.fillStyle = mcol[0]; ctx.fillRect(bx + 2, y + 2, TILE - 4, TILE - 6);
-      // Highlight & rune arrows
-      ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.fillRect(bx + 4, y + 4, TILE - 8, 3);
-      ctx.fillStyle = "#fff";
-      ctx.beginPath(); ctx.moveTo(bx + 6, y + 16); ctx.lineTo(bx + 12, y + 11); ctx.lineTo(bx + 12, y + 21); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(bx + 26, y + 16); ctx.lineTo(bx + 20, y + 11); ctx.lineTo(bx + 20, y + 21); ctx.fill();
+      const sImg = w === 0 ? tileSlideImg.day : tileSlideImg.night;
+      if (sImg && sImg.complete && sImg.naturalWidth > 0) {
+        ctx.drawImage(sImg, bx, y, TILE, TILE);
+      } else {
+        const mcol = w ? ["#e056fd", "#68139a"] : ["#9b5de5", "#4a1985"];
+        // Base shadow & block
+        ctx.fillStyle = mcol[1]; ctx.fillRect(bx, y, TILE, TILE);
+        ctx.fillStyle = mcol[0]; ctx.fillRect(bx + 2, y + 2, TILE - 4, TILE - 6);
+        // Highlight & rune arrows
+        ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.fillRect(bx + 4, y + 4, TILE - 8, 3);
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.moveTo(bx + 6, y + 16); ctx.lineTo(bx + 12, y + 11); ctx.lineTo(bx + 12, y + 21); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(bx + 26, y + 16); ctx.lineTo(bx + 20, y + 11); ctx.lineTo(bx + 20, y + 21); ctx.fill();
+      }
     } else if (t === "#") { // Solid Terrain
       const topOpen = r === 0 || tile(c, r - 1) !== "#";
       const gImg = tileGroundImg[w];
@@ -1549,9 +1561,14 @@ function drawMovers(w) {
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, 2, 0, 7); ctx.fill();
       ctx.restore();
     } else { // Floating Celestial Moving Platform
-      rr(q.x, q.y + OFFY, 64, 12, 4); ctx.fillStyle = P.mineDk; ctx.fill();
-      rr(q.x + 2, q.y + OFFY, 60, 8, 3); ctx.fillStyle = P.mine; ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.fillRect(q.x + 6, q.y + OFFY + 2, 52, 2);
+      const mImg = w === 0 ? moverPlatformImg.day : moverPlatformImg.night;
+      if (mImg && mImg.complete && mImg.naturalWidth > 0) {
+        ctx.drawImage(mImg, q.x, q.y + OFFY - 2, 64, 16);
+      } else {
+        rr(q.x, q.y + OFFY, 64, 12, 4); ctx.fillStyle = P.mineDk; ctx.fill();
+        rr(q.x + 2, q.y + OFFY, 60, 8, 3); ctx.fillStyle = P.mine; ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.fillRect(q.x + 6, q.y + OFFY + 2, 52, 2);
+      }
     }
   }
 }
