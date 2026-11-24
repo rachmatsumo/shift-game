@@ -888,7 +888,7 @@ const tileSlideImg = { day: null, night: null };
 const moverPlatformImg = { day: null, night: null };
 const sawBladeImg = { day: null, night: null };
 const spikesImg = { floorDay: null, floorNight: null, ceiling: null };
-const ASSET_VER = "18";
+const ASSET_VER = "19";
 if (typeof Image !== "undefined") {
   [1, 2, 3, 4, 5].forEach(num => {
     const im = new Image(); im.src = `assets/comic_${num}.jpg?v=${ASSET_VER}`; comicImages.push(im);
@@ -1722,7 +1722,7 @@ function drawBoss(w) {
   const headCenterX = bx - 70 + surgeX;
   const headCenterY = 175 + bobY;
   const sprW = 440;
-  const sprH = 412;
+  const sprH = 362;
 
   if (bossColossusImg && bossColossusImg.complete && bossColossusImg.naturalWidth > 0) {
     ctx.save();
@@ -1737,10 +1737,10 @@ function drawBoss(w) {
     // Draw sprite centered on pivot
     ctx.drawImage(bossColossusImg, -sprW / 2, -sprH / 2, sprW, sprH);
 
-    // Pulsating glowing eye flare on the titan face (calibrated to 1024x960 HD sprite)
+    // Pulsating glowing eye flare on the titan face (calibrated to 984x810 AI boss sprite)
     const eyePulse = 0.8 + 0.35 * Math.sin(T * 5.0);
-    const eyeRelX = (180 / 1024) * sprW;
-    const eyeRelY = (-55 / 960) * sprH;
+    const eyeRelX = 0.142 * sprW;
+    const eyeRelY = -0.0674 * sprH;
 
     ctx.shadowColor = w === 0 ? "#ff0055" : "#a855f7";
     ctx.shadowBlur = 24 * eyePulse;

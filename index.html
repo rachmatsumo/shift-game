@@ -136,7 +136,7 @@ window.addEventListener('appinstalled', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=18').then(reg => {
+  navigator.serviceWorker.register('./sw.js?v=19').then(reg => {
     reg.update();
   }).catch(()=>{});
   let refreshing = false;
@@ -148,11 +148,11 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
-<script src="src/i18n.js?v=18"></script>
-<script src="src/profile.js?v=18"></script>
-<script src="src/leaderboard.js?v=18"></script>
-<script src="src/levels.js?v=18"></script>
-<script src="src/audio.js?v=18"></script>
-<script src="src/game.js?v=18"></script>
+<script src="src/i18n.js?v=19"></script>
+<script src="src/profile.js?v=19"></script>
+<script src="src/leaderboard.js?v=19"></script>
+<script src="src/levels.js?v=19"></script>
+<script src="src/audio.js?v=19"></script>
+<script src="src/game.js?v=19"></script>
 </body>
 </html>
