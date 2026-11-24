@@ -89,11 +89,15 @@ if (typeof window !== "undefined") {
 
     // Utility icons on touch or mouse click
     if (pt.y < 36) {
-      if (Math.hypot(pt.x - (W - 28), pt.y - 18) < 16) A.toggleMute();
-      else if (Math.hypot(pt.x - (W - 64), pt.y - 18) < 16) toggleFullscreen();
-      else if (Math.hypot(pt.x - (W - 100), pt.y - 18) < 16 && state === "play") restart();
-      else if (Math.hypot(pt.x - (W - 136), pt.y - 18) < 16 && state === "play") { A.click(); setState("title"); load(0, false); }
-      else if (Math.hypot(pt.x - (W - 172), pt.y - 18) < 16 && state === "play") { A.click(); setState("pause"); return; }
+      const fsBtn = !isPWA;
+      if (Math.hypot(pt.x - (W - 28), pt.y - 18) < 16) { A.toggleMute(); return; }
+      if (fsBtn && Math.hypot(pt.x - (W - 64), pt.y - 18) < 16) { toggleFullscreen(); return; }
+      const restartX = fsBtn ? W - 100 : W - 64;
+      const homeX = fsBtn ? W - 136 : W - 100;
+      const pauseX = fsBtn ? W - 172 : W - 136;
+      if (Math.hypot(pt.x - restartX, pt.y - 18) < 16 && state === "play") { restart(); return; }
+      else if (Math.hypot(pt.x - homeX, pt.y - 18) < 16 && state === "play") { A.click(); setState("title"); load(0, false); return; }
+      else if (Math.hypot(pt.x - pauseX, pt.y - 18) < 16 && state === "play") { A.click(); setState("pause"); return; }
     }
     if (state === "title") {
       // Check top badges
@@ -171,7 +175,26 @@ if (typeof window !== "undefined") {
         } else { A.back(); setState("title"); }
       }
     } else if (state === "leaderboard") {
-      A.back(); setState("title");
+      // Check tabs (All-Time vs Per-Level)
+      if (pt.y >= 50 && pt.y <= 78) {
+        if (pt.x >= W / 2 - 230 && pt.x <= W / 2 - 5) {
+          lbTab = 0; A.click(); return;
+        } else if (pt.x >= W / 2 + 5 && pt.x <= W / 2 + 230) {
+          lbTab = 1; A.click(); return;
+        }
+      }
+      // Check per-level prev / next level
+      if (lbTab === 1 && pt.y >= 80 && pt.y <= 106) {
+        if (pt.x >= W / 2 - 225 && pt.x <= W / 2 - 130) {
+          lbLevel = Math.max(0, lbLevel - 1); A.move(); return;
+        } else if (pt.x >= W / 2 + 130 && pt.x <= W / 2 + 225) {
+          lbLevel = Math.min(LEVELS.length - 1, lbLevel + 1); A.move(); return;
+        }
+      }
+      // Back button
+      if (pt.y >= 295) {
+        A.back(); setState("title"); return;
+      }
     } else if (state === "win" || state === "end") {
       pressed["Space"] = true;
     }
@@ -181,6 +204,19 @@ if (typeof window !== "undefined") {
     if (activeTouches.has(e.pointerId)) {
       activeTouches.set(e.pointerId, getCanvasPos(e));
       updateTouchControls();
+    }
+    if (state === "title" && e.pointerType !== "touch") {
+      const pt = getCanvasPos(e);
+      const inMenuX = pt.x >= (W / 2 - 145) && pt.x <= (W / 2 + 145);
+      if (inMenuX) {
+        for (let i = 0; i < 5; i++) {
+          const y = 152 + i * 27;
+          if (pt.y >= y - 18 && pt.y <= y + 6) {
+            titleIndex = i;
+            break;
+          }
+        }
+      }
     }
   });
   const endTouch = e => {
@@ -270,6 +306,11 @@ function enterFullscreen() {
 
 function toggleFullscreen() {
   if (typeof document === "undefined") return;
+  // In PWA standalone mode, always remain fullscreen; never exit!
+  if (isPWA) {
+    enterFullscreen();
+    return;
+  }
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     enterFullscreen();
   } else {
@@ -300,10 +341,22 @@ let movers = [], plats = [], moverT = 0, accT = 0, gateClosed = true, runs = [],
 let shiftT = 0, prevWorld = 0, shiftX = 0, shiftY = 0, stepT = 0, titleT = 0, particles = [];
 let shards = [], shardsTotal = 0, shardsCollected = 0;
 let levelCols = 20, camX = 0, camTargetX = 0, boss = null, bossParticles = [];
+const springAnim = {};
+let titleIndex = 0;
+let lbTab = 0, lbLevel = 0;
 const showPlayer = () => state !== "title" && state !== "select" && state !== "lore" && state !== "leaderboard";
+
+// Detect PWA Standalone environment
+const isPWA = typeof window !== "undefined" && (
+  (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches)) ||
+  (window.navigator && window.navigator.standalone === true) ||
+  (typeof document !== "undefined" && document.referrer && document.referrer.includes('android-app://'))
+);
 
 // Leaderboard integration helper
 function showLeaderboard() {
+  lbTab = 0;
+  lbLevel = li;
   setState("leaderboard");
 }
 
@@ -531,7 +584,7 @@ function win() {
     const pname = (typeof PlayerProfile !== "undefined") ? PlayerProfile.name : "Gamer";
     const pavatar = (typeof PlayerProfile !== "undefined") ? PlayerProfile.avatar : "weaver";
     const pcountry = (typeof PlayerProfile !== "undefined") ? PlayerProfile.country : "ID";
-    Leaderboard.submitScore(pname, li + 1, time, deaths, totStars, pavatar, pcountry);
+    Leaderboard.submitScore(pname, li + 1, time, deaths, totStars, pavatar, pcountry, levelTime, levelDeaths, winStars);
   }
 
   setState(li === LEVELS.length - 1 ? "end" : "win");
@@ -597,7 +650,18 @@ function update(dt) {
   stepT -= dt;
   if (p.ground && Math.abs(p.vx) > 120 && stepT <= 0) { A.step(); stepT = .23; }
 
-  if (touches("J", 2) && p.vy >= 0) { p.vy = -760; p.pad = true; p.ground = false; A.pad(); burst(p.x + 11, p.y + p.h, "#7CFC9A", 8, 140); }
+  if (touches("J", 2) && p.vy >= 0) {
+    p.vy = -760; p.pad = true; p.ground = false; p.springBounce = 1.0; A.pad();
+    burst(p.x + 11, p.y + p.h, "#7CFC9A", 12, 180);
+    burst(p.x + 11, p.y + p.h, "#00cec9", 6, 130);
+    const minR = Math.max(0, Math.floor(p.y / TILE)), maxR = Math.min(10, Math.floor((p.y + p.h + 6) / TILE));
+    const minC = Math.max(0, Math.floor(p.x / TILE)), maxC = Math.min(levelCols - 1, Math.floor((p.x + p.w) / TILE));
+    for (let r = minR; r <= maxR; r++) {
+      for (let c = minC; c <= maxC; c++) {
+        if (tile(c, r) === "J") springAnim[r + "_" + c] = 0.35;
+      }
+    }
+  }
   const onLever = touches("y", 2); if (onLever && !p.onLever) toggleGate(); p.onLever = onLever;
   if (hurts(world) || sawHit() || p.y > H) { die(); return; }
 
@@ -1295,14 +1359,47 @@ function drawTiles(w) {
           ctx.fillStyle = "#fff"; ctx.fillRect(bx + 3, by - 13, 2, 7);
         }
       }
-    } else if (t === "J") { // Spring Pad (Launch Pedestal)
-      const sq = Math.abs(Math.sin(T * 6)) * 2;
+    } else if (t === "J") { // Spring Pad (Launch Pedestal with dynamic bounce physics)
+      const anim = springAnim[r + "_" + c] || 0;
+      let padOff = 0;
+      if (anim > 0) {
+        // High-energy bounce recoil: first compress down (anim > 0.22), then shoot up high (anim <= 0.22)
+        if (anim > 0.22) {
+          padOff = ((anim - 0.22) / 0.13) * 7; // pushes down up to 7px
+        } else {
+          const tRel = (0.22 - anim) / 0.22;
+          padOff = -11 * Math.sin(tRel * Math.PI) * Math.exp(-tRel * 2.2); // snaps UP to 11px with spring dampening
+        }
+      } else {
+        padOff = Math.sin(T * 6) * 1.5;
+      }
+
+      // Base mount
       ctx.fillStyle = "#1e3799"; ctx.fillRect(x + 3, y + TILE - 6, TILE - 6, 6);
-      ctx.strokeStyle = "#00cec9"; ctx.lineWidth = 2.5; ctx.beginPath();
-      ctx.moveTo(x + 8, y + TILE - 6); ctx.lineTo(x + 24, y + TILE - 12);
-      ctx.lineTo(x + 8, y + TILE - 17 + sq); ctx.lineTo(x + 24, y + TILE - 21 + sq); ctx.stroke();
-      ctx.fillStyle = "#55efc4"; ctx.fillRect(x + 5, y + TILE - 25 + sq, TILE - 10, 5);
-      ctx.fillStyle = "#fff"; ctx.fillRect(x + 10, y + TILE - 24 + sq, TILE - 20, 2);
+      ctx.fillStyle = "#0984e3"; ctx.fillRect(x + 5, y + TILE - 4, TILE - 10, 2);
+
+      // Accordion Spring Coils (expands/contracts based on padOff)
+      const springTop = y + TILE - 23 + padOff;
+      ctx.strokeStyle = anim > 0 ? "#55efc4" : "#00cec9"; ctx.lineWidth = anim > 0 ? 3 : 2.5; ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(x + 8, y + TILE - 6);
+      ctx.lineTo(x + 24, y + TILE - 11 + padOff * 0.25);
+      ctx.lineTo(x + 8, y + TILE - 16 + padOff * 0.5);
+      ctx.lineTo(x + 24, y + TILE - 20 + padOff * 0.75);
+      ctx.lineTo(x + 16, springTop + 4);
+      ctx.stroke();
+
+      // Launch Pad Head with glowing energy trim
+      if (anim > 0.1) {
+        ctx.save();
+        ctx.shadowColor = "#55efc4"; ctx.shadowBlur = 14;
+        ctx.fillStyle = "rgba(85, 239, 196, 0.4)";
+        ctx.fillRect(x + 2, springTop - 3, TILE - 4, 9);
+        ctx.restore();
+      }
+      ctx.fillStyle = "#00b894"; ctx.fillRect(x + 4, springTop, TILE - 8, 5);
+      ctx.fillStyle = "#55efc4"; ctx.fillRect(x + 5, springTop + 1, TILE - 10, 3);
+      ctx.fillStyle = "#fff"; ctx.fillRect(x + 10, springTop + 1, TILE - 20, 2);
     } else if (t === "o") { // Thin / One-way Platform
       ctx.fillStyle = P.solidHi; ctx.fillRect(x, y, TILE, 8);
       ctx.fillStyle = P.trim; ctx.fillRect(x, y, TILE, 2);
@@ -1388,7 +1485,8 @@ function drawPlayer(w) {
   const sq = p.ground ? 1 : 1 + Math.min(.15, Math.abs(p.vy) / 4000);
   const cx = p.x + p.w / 2, by = p.y + p.h + OFFY;
 
-  ctx.save(); ctx.translate(cx + pOff, by); ctx.scale(1 / sq, sq);
+  const sBounce = p.springBounce || 0;
+  ctx.save(); ctx.translate(cx + pOff, by); ctx.scale((1 / sq) * (1 - sBounce * 0.22), sq * (1 + sBounce * 0.38));
 
   // Soft drop shadow
   ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(0, -2, p.w * .45, 3.5, 0, 0, 7); ctx.fill();
@@ -1632,10 +1730,17 @@ function drawTouchControls() {
 
   // Top Utility Bar Quick Touch Icons with crisp Bootstrap Icons
   const isFs = typeof document !== "undefined" && (document.fullscreenElement || document.webkitFullscreenElement);
-  panel(W - 188, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.pause, W - 172, 17, 13, "#fff"); // Pause
-  panel(W - 152, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.home, W - 136, 17, 14, "#fff"); // Home
-  panel(W - 116, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.restart, W - 100, 17, 14, "#fff"); // Restart
-  panel(W - 80, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(isFs ? BI.fullscreenExit : BI.fullscreen, W - 64, 17, 13, "#fff"); // Fullscreen
+  const fsBtn = !isPWA;
+  const restartX = fsBtn ? W - 100 : W - 64;
+  const homeX = fsBtn ? W - 136 : W - 100;
+  const pauseX = fsBtn ? W - 172 : W - 136;
+
+  panel(pauseX - 16, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.pause, pauseX, 17, 13, "#fff"); // Pause
+  panel(homeX - 16, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.home, homeX, 17, 14, "#fff"); // Home
+  panel(restartX - 16, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(BI.restart, restartX, 17, 14, "#fff"); // Restart
+  if (fsBtn) {
+    panel(W - 80, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(isFs ? BI.fullscreenExit : BI.fullscreen, W - 64, 17, 13, "#fff"); // Fullscreen
+  }
   panel(W - 44, 4, 32, 26, "rgba(20, 15, 38, 0.65)"); biIcon(A.muted ? BI.soundOff : BI.soundOn, W - 28, 17, 14, "#fff"); // Audio
   ctx.restore();
 }
@@ -1656,23 +1761,43 @@ function drawHud() {
   panel(6, 6, W - 12, 28, "rgba(12, 8, 28, .85)", P.accent);
 
   // Left: Level Number / Name
-  text(LEVELS[li].name, 16, 25, 12, "#fff", "left", true, FONT_HEADER);
+  const lvlName = LEVELS[li].name;
+  text(lvlName, 16, 25, 12, "#fff", "left", true, FONT_HEADER);
 
-  // Center: World Name & Celestial Icon
-  worldIcon(world, W / 2 - 40, 20, 7);
-  text(world ? "NIGHT" : "DAY", W / 2 - 28, 25, 12, P.accent, "left", true, FONT_HEADER);
+  // Celestial World Name & Icon
+  worldIcon(world, 172, 20, 7);
+  text(world ? "NIGHT" : "DAY", 185, 25, 11, P.accent, "left", true, FONT_HEADER);
 
-  // Mid-Right items: Shifts budget & Shards
-  let infoX = W / 2 + 30;
-  if (isFinite(budget)) {
-    const shiftCol = budget <= 2 ? "#ff7675" : "#c0c6ff";
-    text(`Shifts: ${budget}`, infoX, 25, 11, shiftCol, "left");
-    infoX += 65;
+  // Right boundary calculation: keeps text completely clear of the top utility touch buttons
+  const isTouch = isTouchDevice || hasTouch;
+  const fsBtn = !isPWA;
+  const touchLeftEdge = isTouch ? (fsBtn ? W - 192 : W - 156) : W - 16;
+  const rightBoundary = touchLeftEdge - 8;
+
+  // Render stats cleanly right-to-left so they NEVER collide
+  let curX = rightBoundary;
+
+  // 1. Level Timer
+  text(levelTime.toFixed(1) + "s", curX, 25, 11, "#fff", "right");
+  curX -= 44;
+
+  // 2. Deaths (show if > 0 or on desktop)
+  if (deaths > 0 || !isTouch) {
+    text(`💀 ${deaths}`, curX, 25, 10, deaths === 0 ? "#55efc4" : "#ff7675", "right");
+    curX -= 42;
   }
 
+  // 3. Shards (if any in level)
   if (shardsTotal > 0) {
     const shCol = shardsCollected >= shardsTotal ? "#55efc4" : "#ffd166";
-    text(`★ ${shardsCollected}/${shardsTotal}`, infoX, 25, 11, shCol, "left");
+    text(`★ ${shardsCollected}/${shardsTotal}`, curX, 25, 11, shCol, "right");
+    curX -= 50;
+  }
+
+  // 4. Shifts budget (if finite)
+  if (isFinite(budget)) {
+    const shiftCol = budget <= 2 ? "#ff7675" : "#c0c6ff";
+    text(`Shifts: ${budget}`, curX, 25, 11, shiftCol, "right");
   }
 
   // Epic Boss Encounter HUD & Distance Meter Bar
@@ -1731,11 +1856,6 @@ function drawHud() {
       ctx.restore();
     }
   }
-
-  // Right: Deaths & Level Timer
-  const statOff = (isTouchDevice || hasTouch) ? 198 : 16;
-  text(`Deaths: ${deaths}`, W - statOff - 65, 25, 11, "#cbd5e1", "right");
-  text(levelTime.toFixed(1) + "s", W - statOff, 25, 12, "#fff", "right");
 
   if (!isTouchDevice && !hasTouch && A.muted) text("MUTED", W - 16, 48, 10, "#ff7675", "right");
 }
@@ -1819,7 +1939,7 @@ function drawTitle() {
     panel(W / 2 - 68, 8, 136, 22, "rgba(0, 206, 201, 0.25)", "#00cec9");
     biIcon(BI.download, W / 2 - 50, 19, 12, "#00cec9");
     text("INSTALL APP", W / 2 + 10, 23, 10, "#00cec9", "center", true, FONT_HEADER);
-  } else if (isTouchDevice || hasTouch) {
+  } else if (!isPWA && (isTouchDevice || hasTouch)) {
     panel(W / 2 - 68, 8, 136, 22, "rgba(255, 255, 255, 0.12)", "rgba(255, 255, 255, 0.3)");
     biIcon(BI.fullscreen, W / 2 - 50, 19, 12, "#ffd166");
     text("FULLSCREEN", W / 2 + 10, 23, 10, "#ffd166", "center", true, FONT_HEADER);
@@ -1840,14 +1960,32 @@ function drawTitle() {
     ["T", curLang === "id" ? "Ganti Bahasa (English)" : "Switch Language (Indonesia)"]
   ];
   items.forEach(([k, l], i) => {
-    const y = 152 + i * 27, pulse = i === 0 ? .5 + .5 * Math.sin(T * 5) : 0;
-    panel(W / 2 - 145, y - 18, 290, 24, i === 0 ? `rgba(255,255,255,${.14 + pulse * .14})` : "rgba(10,8,30,.55)", i === 0 ? "#ffd166" : "rgba(255,255,255,.2)");
-    keycap(k, W / 2 - 135, y, 42); text(l, W / 2 + 16, y, 12, "#fff", "center", true, FONT_HEADER);
+    const y = 152 + i * 27;
+    const isSelected = i === titleIndex;
+    const pulse = isSelected ? .5 + .5 * Math.sin(T * 8) : 0;
+    
+    // Distinct glowing hover panel & golden border
+    panel(
+      W / 2 - 145, y - 18, 290, 24,
+      isSelected ? `rgba(255, 209, 102, ${.18 + pulse * .14})` : "rgba(10,8,30,.55)",
+      isSelected ? "#ffd166" : "rgba(255,255,255,.2)"
+    );
+
+    // Glowing selection indicator on left
+    if (isSelected) {
+      ctx.save();
+      ctx.shadowColor = "#ffd166"; ctx.shadowBlur = 8;
+      text("✦", W / 2 - 138, y, 11, "#ffd166", "center");
+      ctx.restore();
+    }
+
+    keycap(k, W / 2 - 128, y, 42);
+    text(l, W / 2 + 18, y, 12, isSelected ? "#ffd166" : "#fff", "center", true, FONT_HEADER);
   });
 
   // Controls hint panel
-  panel(W / 2 - 215, 294, 430, 20, "rgba(8,5,20,.65)", "rgba(255,255,255,.15)");
-  text("SHIFT / E: Swap World    SPACE: Jump    A / D / ◀ ▶: Move    F: Fullscreen", W / 2, 308, 10, "#c0c6ff", "center", false);
+  panel(W / 2 - 225, 294, 450, 20, "rgba(8,5,20,.65)", "rgba(255,255,255,.15)");
+  text("▲ ▼ / W S: Select  •  ENTER / SPACE: Confirm  •  SHIFT: Swap World  •  F: Fullscreen", W / 2, 308, 10, "#c0c6ff", "center", false);
 
   // Clean Footer with full credits
   panel(W / 2 - 240, 320, 480, 24, "rgba(14,9,32,.85)", P.accent);
@@ -1926,45 +2064,98 @@ function drawLore() {
 
 function drawLeaderboard() {
   ctx.fillStyle = "rgba(6, 4, 15, 0.94)"; ctx.fillRect(0, 0, W, H);
-  panel(W / 2 - 250, 25, 500, 310, "rgba(18, 12, 38, 0.96)", "#ffd166");
-  text("HALL OF FAME: LEADERBOARD", W / 2, 54, 18, "#ffd166", "center", true, FONT_HEADER);
+  panel(W / 2 - 250, 20, 500, 322, "rgba(18, 12, 38, 0.96)", "#ffd166");
+  text("HALL OF FAME: LEADERBOARD", W / 2, 42, 17, "#ffd166", "center", true, FONT_HEADER);
 
-  const scores = (typeof Leaderboard !== "undefined") ? Leaderboard.getScores() : [];
+  // Top Tabs: All-Time Akumulasi vs Per-Level
+  const tab0Active = lbTab === 0;
+  panel(W / 2 - 230, 52, 225, 24, tab0Active ? "rgba(255,209,102,0.25)" : "rgba(255,255,255,0.06)", tab0Active ? "#ffd166" : "rgba(255,255,255,0.2)");
+  text("🏆 ALL-TIME (AKUMULASI)", W / 2 - 117, 68, 11, tab0Active ? "#ffd166" : "#cbd5e1", "center", true, FONT_HEADER);
 
-  // Table Header
-  panel(W / 2 - 230, 68, 460, 22, "rgba(255,255,255,0.08)", "rgba(255,255,255,0.15)");
-  text("RANK", W / 2 - 200, 83, 11, "#ffd166", "center", false);
-  text("PLAYER", W / 2 - 120, 83, 11, "#ffd166", "left", false);
-  text("LEVEL", W / 2 + 10, 83, 11, "#ffd166", "center", false);
-  text("STARS", W / 2 + 70, 83, 11, "#ffd166", "center", false);
-  text("TIME", W / 2 + 140, 83, 11, "#ffd166", "center", false);
-  text("DEATHS", W / 2 + 200, 83, 11, "#ffd166", "center", false);
+  const tab1Active = lbTab === 1;
+  panel(W / 2 + 5, 52, 225, 24, tab1Active ? "rgba(0,206,201,0.25)" : "rgba(255,255,255,0.06)", tab1Active ? "#00cec9" : "rgba(255,255,255,0.2)");
+  text("🎯 PER LEVEL", W / 2 + 117, 68, 11, tab1Active ? "#00cec9" : "#cbd5e1", "center", true, FONT_HEADER);
 
-  // Table Rows (Top 7)
-  const displayRows = scores.slice(0, 7);
-  displayRows.forEach((s, idx) => {
-    const y = 100 + idx * 25;
-    const isTop3 = idx < 3;
-    const rankCol = idx === 0 ? "#ffd166" : idx === 1 ? "#dfe6e9" : idx === 2 ? "#e67e22" : "#999";
-    panel(W / 2 - 230, y - 8, 460, 22, isTop3 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.2)", "rgba(255,255,255,0.08)");
+  if (lbTab === 0) {
+    // All-Time Cumulative Campaign Tab (Ranked by furthest level, least total deaths, fastest total time)
+    panel(W / 2 - 230, 80, 460, 22, "rgba(255,255,255,0.08)", "rgba(255,255,255,0.15)");
+    text("RANK", W / 2 - 200, 95, 10, "#ffd166", "center", false);
+    text("PLAYER", W / 2 - 120, 95, 10, "#ffd166", "left", false);
+    text("MAX LVL", W / 2 + 15, 95, 10, "#ffd166", "center", false);
+    text("STARS", W / 2 + 75, 95, 10, "#ffd166", "center", false);
+    text("TOT TIME", W / 2 + 140, 95, 10, "#ffd166", "center", false);
+    text("DEATHS", W / 2 + 200, 95, 10, "#ffd166", "center", false);
 
-    const cFlag = `[${s.country || "GL"}]`;
-    const avSymbol = s.avatar === "solar" ? "☼" : s.avatar === "lunar" ? "☽" : s.avatar === "cosmic" ? "★" : s.avatar === "knight" ? "◈" : "✦";
+    const scores = (typeof Leaderboard !== "undefined") ? Leaderboard.getAllTimeScores() : [];
+    const displayRows = scores.slice(0, 7);
+    displayRows.forEach((s, idx) => {
+      const y = 112 + idx * 24;
+      const isTop3 = idx < 3;
+      const rankCol = idx === 0 ? "#ffd166" : idx === 1 ? "#dfe6e9" : idx === 2 ? "#e67e22" : "#999";
+      panel(W / 2 - 230, y - 8, 460, 21, isTop3 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.2)", "rgba(255,255,255,0.08)");
 
-    text(`#${idx + 1}`, W / 2 - 200, y + 7, 11, rankCol, "center", false);
-    text(`${cFlag} ${avSymbol} ${s.name}`, W / 2 - 120, y + 7, 11, "#fff", "left", false);
-    text(`Lv ${s.level}`, W / 2 + 10, y + 7, 11, "#00cec9", "center", false);
-    text(`★ ${s.stars}`, W / 2 + 70, y + 7, 11, "#ffd166", "center", false);
-    text(`${s.time}s`, W / 2 + 140, y + 7, 11, "#fff", "center", false);
-    text(`${s.deaths}`, W / 2 + 200, y + 7, 11, s.deaths === 0 ? "#55efc4" : "#ff7675", "center", false);
-  });
+      const cFlag = `[${s.country || "ID"}]`;
+      const avSymbol = s.avatar === "solar" ? "☼" : s.avatar === "lunar" ? "☽" : s.avatar === "cosmic" ? "★" : s.avatar === "knight" ? "◈" : "✦";
 
-  if (displayRows.length === 0) {
-    text("Belum ada skor tercatat. Selesaikan level untuk masuk papan skor!", W / 2, 160, 12, "#cbd5e1");
+      text(`#${idx + 1}`, W / 2 - 200, y + 6, 11, rankCol, "center", false);
+      text(`${cFlag} ${avSymbol} ${s.name}`, W / 2 - 120, y + 6, 11, "#fff", "left", false);
+      text(`Lv ${s.level}`, W / 2 + 15, y + 6, 11, "#00cec9", "center", false);
+      text(`★ ${s.stars}`, W / 2 + 75, y + 6, 11, "#ffd166", "center", false);
+      text(`${s.time}s`, W / 2 + 140, y + 6, 11, "#fff", "center", false);
+      text(`${s.deaths}`, W / 2 + 200, y + 6, 11, s.deaths === 0 ? "#55efc4" : "#ff7675", "center", false);
+    });
+
+    if (displayRows.length === 0) {
+      text("Belum ada skor tercatat. Selesaikan level untuk masuk papan skor!", W / 2, 180, 12, "#cbd5e1");
+    }
+  } else {
+    // Per-Level Records Tab
+    // Level Selector Bar
+    panel(W / 2 - 230, 80, 460, 24, "rgba(255,255,255,0.08)", "rgba(0,206,201,0.3)");
+    panel(W / 2 - 225, 82, 70, 20, "rgba(255,255,255,0.12)", "#00cec9");
+    biIcon(BI.chevronLeft, W / 2 - 215, 92, 10, "#00cec9");
+    text("Prev", W / 2 - 195, 96, 10, "#00cec9", "center", true, FONT_HEADER);
+
+    const lvlObj = LEVELS[lbLevel] || { name: `Level ${lbLevel + 1}` };
+    text(`Level ${lbLevel + 1}: ${lvlObj.name}`, W / 2, 96, 11, "#fff", "center", true, FONT_HEADER);
+
+    panel(W / 2 + 155, 82, 70, 20, "rgba(255,255,255,0.12)", "#00cec9");
+    text("Next", W / 2 + 185, 96, 10, "#00cec9", "center", true, FONT_HEADER);
+    biIcon(BI.chevronRight, W / 2 + 215, 92, 10, "#00cec9");
+
+    // Level Header
+    panel(W / 2 - 230, 108, 460, 20, "rgba(255,255,255,0.06)", "rgba(255,255,255,0.12)");
+    text("RANK", W / 2 - 200, 122, 10, "#00cec9", "center", false);
+    text("PLAYER", W / 2 - 120, 122, 10, "#00cec9", "left", false);
+    text("STARS", W / 2 + 30, 122, 10, "#00cec9", "center", false);
+    text("RECORD TIME", W / 2 + 115, 122, 10, "#00cec9", "center", false);
+    text("DEATHS", W / 2 + 195, 122, 10, "#00cec9", "center", false);
+
+    const lvlScores = (typeof Leaderboard !== "undefined") ? Leaderboard.getLevelScores(lbLevel + 1) : [];
+    const displayRows = lvlScores.slice(0, 6);
+    displayRows.forEach((s, idx) => {
+      const y = 138 + idx * 24;
+      const isTop3 = idx < 3;
+      const rankCol = idx === 0 ? "#ffd166" : idx === 1 ? "#dfe6e9" : idx === 2 ? "#e67e22" : "#999";
+      panel(W / 2 - 230, y - 8, 460, 21, isTop3 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.2)", "rgba(255,255,255,0.08)");
+
+      const cFlag = `[${s.country || "ID"}]`;
+      const avSymbol = s.avatar === "solar" ? "☼" : s.avatar === "lunar" ? "☽" : s.avatar === "cosmic" ? "★" : s.avatar === "knight" ? "◈" : "✦";
+
+      text(`#${idx + 1}`, W / 2 - 200, y + 6, 11, rankCol, "center", false);
+      text(`${cFlag} ${avSymbol} ${s.name}`, W / 2 - 120, y + 6, 11, "#fff", "left", false);
+      text(`★ ${s.stars}`, W / 2 + 30, y + 6, 11, "#ffd166", "center", false);
+      text(`${s.time}s`, W / 2 + 115, y + 6, 11, "#fff", "center", false);
+      text(`${s.deaths}`, W / 2 + 195, y + 6, 11, s.deaths === 0 ? "#55efc4" : "#ff7675", "center", false);
+    });
+
+    if (displayRows.length === 0) {
+      text(`Belum ada rekor untuk Level ${lbLevel + 1}. Jadilah yang pertama!`, W / 2, 190, 12, "#cbd5e1");
+    }
   }
 
-  panel(W / 2 - 110, 298, 220, 24, "rgba(255,255,255,0.12)", "#ffd166");
-  text("Klik / Tekan ESC untuk Kembali", W / 2, 314, 11, "#fff");
+  panel(W / 2 - 160, 300, 320, 24, "rgba(255,255,255,0.12)", "#ffd166");
+  text("Tab / ◀ ▶ Ganti Tab • Klik / ESC untuk Kembali", W / 2, 316, 11, "#fff");
 }
 const SELCOLS = 7, SELPER = 21;
 function drawSelect() {
@@ -2096,12 +2287,28 @@ function draw() {
 function menuInput() {
   if (hit("KeyM")) { A.toggleMute(); }
   if (state === "title") {
-    if (hit("Space", "Enter")) {
+    if (hit("ArrowUp", "KeyW")) {
+      titleIndex = (titleIndex - 1 + 5) % 5;
+      A.move();
+    } else if (hit("ArrowDown", "KeyS")) {
+      titleIndex = (titleIndex + 1) % 5;
+      A.move();
+    } else if (hit("Space", "Enter")) {
       A.click();
-      if (typeof PlayerProfile !== "undefined" && !PlayerProfile.isConfigured) {
-        openProfileModal(() => { deaths = 0; time = 0; startLevel(0); });
-      } else {
-        deaths = 0; time = 0; startLevel(0);
+      if (titleIndex === 0) {
+        if (typeof PlayerProfile !== "undefined" && !PlayerProfile.isConfigured) {
+          openProfileModal(() => { deaths = 0; time = 0; startLevel(0); });
+        } else {
+          deaths = 0; time = 0; startLevel(0);
+        }
+      } else if (titleIndex === 1) {
+        cursor = save.unlocked; setState("select"); load(0, false);
+      } else if (titleIndex === 2) {
+        comicPage = 0; setState("lore");
+      } else if (titleIndex === 3) {
+        showLeaderboard();
+      } else if (titleIndex === 4) {
+        if (typeof I18N !== "undefined") I18N.toggleLang();
       }
     }
     else if (hit("KeyL")) { A.click(); cursor = save.unlocked; setState("select"); load(0, false); }
@@ -2117,7 +2324,17 @@ function menuInput() {
     }
     else if (hit("Escape", "KeyH")) { A.back(); setState("title"); }
   } else if (state === "leaderboard") {
-    if (hit("Escape", "Space", "Enter", "KeyB")) { A.back(); setState("title"); }
+    if (hit("Tab")) {
+      lbTab = 1 - lbTab; A.click();
+    } else if (hit("ArrowLeft", "KeyA")) {
+      if (lbTab === 1) { lbLevel = Math.max(0, lbLevel - 1); A.move(); }
+      else { lbTab = 0; }
+    } else if (hit("ArrowRight", "KeyD")) {
+      if (lbTab === 1) { lbLevel = Math.min(LEVELS.length - 1, lbLevel + 1); A.move(); }
+      else { lbTab = 1; }
+    } else if (hit("Escape", "Space", "Enter", "KeyB")) {
+      A.back(); setState("title");
+    }
   } else if (state === "select") {
     const n = LEVELS.length, cols = SELCOLS;
     if (hit("ArrowRight", "KeyD")) { cursor = Math.min(n - 1, cursor + 1); A.move(); }
@@ -2152,6 +2369,8 @@ function frame(now) {
   if (state === "win" || state === "end") { const o = winT; winT += dt; for (let s = 0; s < winStars; s++) if (o < .35 + s * .3 && winT >= .35 + s * .3) A.star(s); }
   if (state === "title") { titleT += dt; if (titleT > 3.2) { titleT = 0; prevWorld = world; shiftT = 1; shiftX = 100 + Math.random() * 440; shiftY = 120 + Math.random() * 120; setWorld(1 - world); } }
   for (const k in slideAnim) { const v = slideAnim[k], nv = v - Math.sign(v) * Math.min(Math.abs(v), 300 * dt); if (!nv) delete slideAnim[k]; else slideAnim[k] = nv; }
+  for (const k in springAnim) { springAnim[k] -= dt; if (springAnim[k] <= 0) delete springAnim[k]; }
+  if (player && player.springBounce > 0) player.springBounce = Math.max(0, player.springBounce - dt * 3.5);
   pOff -= Math.sign(pOff) * Math.min(Math.abs(pOff), 300 * dt);
   for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 700 * dt; q.life -= dt; }
   particles = particles.filter(q => q.life > 0);
