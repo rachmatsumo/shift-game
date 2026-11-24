@@ -864,6 +864,7 @@ const tileGroundImg = [null, null];
 const tileBlockImg = { day: null, night: null };
 const tileSlideImg = { day: null, night: null };
 const moverPlatformImg = { day: null, night: null };
+const sawBladeImg = { day: null, night: null };
 const spikesImg = { floorDay: null, floorNight: null, ceiling: null };
 if (typeof Image !== "undefined") {
   [1, 2, 3, 4, 5].forEach(num => {
@@ -880,6 +881,8 @@ if (typeof Image !== "undefined") {
   tileSlideImg.night = new Image(); tileSlideImg.night.src = "assets/tile_slide_night.png";
   moverPlatformImg.day = new Image(); moverPlatformImg.day.src = "assets/mover_platform_day.png";
   moverPlatformImg.night = new Image(); moverPlatformImg.night.src = "assets/mover_platform_night.png";
+  sawBladeImg.day = new Image(); sawBladeImg.day.src = "assets/saw_blade_day.png";
+  sawBladeImg.night = new Image(); sawBladeImg.night.src = "assets/saw_blade_night.png";
   spikesImg.floorDay = new Image(); spikesImg.floorDay.src = "assets/spikes_floor_day.png";
   spikesImg.floorNight = new Image(); spikesImg.floorNight.src = "assets/spikes_floor_night.png";
   spikesImg.ceiling = new Image(); spikesImg.ceiling.src = "assets/spikes_ceiling.png";
@@ -1545,20 +1548,25 @@ function drawPlayer(w) {
 
 function drawMovers(w) {
   const P = PAL[w];
+  const sImg = w === 0 ? sawBladeImg.day : sawBladeImg.night;
   for (const m of movers) {
     const q = mpos(m, moverT);
     if (m.kind === "saw") {
       ctx.save(); ctx.translate(q.x, q.y + OFFY); ctx.rotate(T * 10 * (w ? .5 : 1));
-      // Outer saw blade teeth
-      ctx.fillStyle = "#dfe6e9"; ctx.beginPath();
-      for (let i = 0; i < 16; i++) {
-        const a = i * Math.PI / 8, rr2 = i % 2 ? 9 : 15;
-        ctx.lineTo(Math.cos(a) * rr2, Math.sin(a) * rr2);
+      if (sImg && sImg.complete && sImg.naturalWidth > 0) {
+        ctx.drawImage(sImg, -18, -18, 36, 36);
+      } else {
+        // Outer saw blade teeth
+        ctx.fillStyle = "#dfe6e9"; ctx.beginPath();
+        for (let i = 0; i < 16; i++) {
+          const a = i * Math.PI / 8, rr2 = i % 2 ? 9 : 15;
+          ctx.lineTo(Math.cos(a) * rr2, Math.sin(a) * rr2);
+        }
+        ctx.closePath(); ctx.fill();
+        // Glowing core hub
+        ctx.fillStyle = "#ff4757"; ctx.beginPath(); ctx.arc(0, 0, 5.5, 0, 7); ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, 2, 0, 7); ctx.fill();
       }
-      ctx.closePath(); ctx.fill();
-      // Glowing core hub
-      ctx.fillStyle = "#ff4757"; ctx.beginPath(); ctx.arc(0, 0, 5.5, 0, 7); ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, 2, 0, 7); ctx.fill();
       ctx.restore();
     } else { // Floating Celestial Moving Platform
       const mImg = w === 0 ? moverPlatformImg.day : moverPlatformImg.night;
