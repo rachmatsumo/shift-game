@@ -1714,10 +1714,10 @@ function drawBoss(w) {
     // Draw sprite centered on pivot
     ctx.drawImage(bossColossusImg, -sprW / 2, -sprH / 2, sprW, sprH);
 
-    // Pulsating glowing eye flare on the titan face
+    // Pulsating glowing eye flare on the titan face (calibrated to 1024x960 HD sprite)
     const eyePulse = 0.8 + 0.35 * Math.sin(T * 5.0);
-    const eyeRelX = (115 / 512) * sprW;
-    const eyeRelY = (12 / 480) * sprH;
+    const eyeRelX = (180 / 1024) * sprW;
+    const eyeRelY = (-55 / 960) * sprH;
 
     ctx.shadowColor = w === 0 ? "#ff0055" : "#a855f7";
     ctx.shadowBlur = 24 * eyePulse;
@@ -1789,9 +1789,12 @@ function drawHud() {
   const lvlName = LEVELS[li].name;
   text(lvlName, 16, 25, 12, "#fff", "left", true, FONT_HEADER);
 
-  // Celestial World Name & Icon
-  worldIcon(world, 172, 20, 7);
-  text(world ? "NIGHT" : "DAY", 185, 25, 11, P.accent, "left", true, FONT_HEADER);
+  // Celestial World Name & Icon (placed dynamically after level name)
+  ctx.font = 'bold 12px "Cinzel", "Cinzel Decorative", serif';
+  const lvlW = Math.ceil(ctx.measureText(lvlName).width);
+  const wIconX = Math.max(140, 16 + lvlW + 16);
+  worldIcon(world, wIconX, 20, 7);
+  text(world ? "NIGHT" : "DAY", wIconX + 13, 25, 11, P.accent, "left", true, FONT_HEADER);
 
   // Right boundary calculation: keeps text completely clear of the top utility touch buttons
   const isTouch = isTouchDevice || hasTouch;
@@ -1809,20 +1812,21 @@ function drawHud() {
   // 2. Deaths (show if > 0 or on desktop)
   if (deaths > 0 || !isTouch) {
     text(`💀 ${deaths}`, curX, 25, 10, deaths === 0 ? "#55efc4" : "#ff7675", "right");
-    curX -= 42;
+    curX -= 38;
   }
 
   // 3. Shards (if any in level)
   if (shardsTotal > 0) {
     const shCol = shardsCollected >= shardsTotal ? "#55efc4" : "#ffd166";
     text(`★ ${shardsCollected}/${shardsTotal}`, curX, 25, 11, shCol, "right");
-    curX -= 50;
+    curX -= 46;
   }
 
   // 4. Shifts budget (if finite)
   if (isFinite(budget)) {
     const shiftCol = budget <= 2 ? "#ff7675" : "#c0c6ff";
-    text(`Shifts: ${budget}`, curX, 25, 11, shiftCol, "right");
+    const shiftLabel = isTouch ? `⚡ ${budget}` : `Shifts: ${budget}`;
+    text(shiftLabel, curX, 25, 11, shiftCol, "right");
   }
 
   // Epic Boss Encounter HUD & Distance Meter Bar

@@ -314,6 +314,7 @@ for fname, svg_code, w, h in ASSETS:
         "google-chrome",
         "--headless",
         "--disable-gpu",
+        "--default-background-color=00000000",
         "--hide-scrollbars",
         f"--window-size={w},{h}",
         f"--screenshot={png_tmp}",
