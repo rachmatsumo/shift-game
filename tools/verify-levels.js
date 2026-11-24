@@ -37,7 +37,7 @@ for (const dir of [1, -1, 0]) for (const jump of [false, true]) for (const shift
 function search(T, s0, target, done, limitMs) {
   const [gx, gy] = target;
   const h = n => (Math.abs(n.x + 11 - gx) + 0.8 * Math.abs(n.y + 14 - gy)) / 32;
-  const key = n => `${n.x / 8 | 0},${n.y / 8 | 0},${n.vy / 220 | 0},${n.ground ? 0 : (n.vx / 120 | 0)},${+n.ground},${n.world},${n.budget},${n.grid},${n.ride},${n.movers ? Math.round(n.mt * 2) : 0}`;
+  const key = n => `${n.x / 8 | 0},${n.y / 8 | 0},${n.vy / 220 | 0},${n.ground ? 0 : (n.vx / 120 | 0)},${+n.ground},${n.world},${n.budget},${n.grid},${n.ride},${n.movers ? Math.round(n.mt * 2) : 0},${n.bt < 0 ? 0 : Math.round(n.bt)}`;
   T.restore(s0);
   const i0 = T.info(), heap = new Heap(), seen = new Set([key(i0)]);
   heap.push({ snap: s0, info: i0, f: h(i0), g: 0, sh: 0, parent: null, act: null });
@@ -77,6 +77,7 @@ function solve(T, LEVELS, i, opts = {}) {
     nodes += r1.nodes; if (!r1.ok) return { ok: false, nodes, ms: Date.now() - t0, exhausted: r1.exhausted };
     path = r1.path; s = r1.snap;
   }
+  shards.sort((a, b) => a[0] - b[0] || a[1] - b[1]); // linear levels: collect left -> right
   for (let si = 0; si < shards.length; si++) {
     const rShard = search(T, s, shards[si], inf => inf.sc > si, TL / (shards.length + 1));
     nodes += rShard.nodes; if (!rShard.ok) return { ok: false, nodes, ms: Date.now() - t0, exhausted: rShard.exhausted };

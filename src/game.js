@@ -382,6 +382,9 @@ function load(i, intro = true) {
     name: LEVELS[i].bossName || "VOID COLOSSUS",
     x: -140,
     vx: LEVELS[i].bossSpeed || 42,
+    rage: LEVELS[i].bossRage ?? .5,   // 0..1: how violently it rears back and lunges
+    ramp: LEVELS[i].bossRamp || 0,    // extra speed gained by the end of the level (final boss)
+    t: 0, state: "walk", vis: 0,
     active: true
   } : null;
   if (boss && intro) A.bossRoar();
@@ -534,6 +537,15 @@ function win() {
   setState(li === LEVELS.length - 1 ? "end" : "win");
 }
 
+// ---- Boss rhythm: a pure function of boss.t (deterministic, so the headless verifier replays it exactly).
+// It walks, rears back with a roar (telegraph, ~1.1s, slow), then lunges (~0.7s, fast), then recovers.
+function bossMul(b) {
+  const cyc = 7 - 2 * b.rage, u = b.t % cyc;
+  if (u >= cyc - 2.0 && u < cyc - .9) { b.state = "rear"; return 1 - .7 * b.rage; }
+  if (u >= cyc - .9 && u < cyc - .2) { b.state = "lunge"; return 1 + 1.9 * b.rage; }
+  b.state = "walk"; return 1;
+}
+
 // ---- Update
 function update(dt) {
   const p = player;
@@ -631,7 +643,11 @@ function update(dt) {
   // Boss movement & collision
   if (boss && boss.active) {
     // Night world slows boss slightly by 15% (gives player an edge by shifting!)
-    boss.x += boss.vx * dt * (world ? 0.85 : 1.0);
+    boss.t += dt;
+    const frac = Math.max(0, Math.min(1, p.x / (levelCols * TILE))), prevSt = boss.state;
+    boss.x += boss.vx * (1 + boss.ramp * frac) * bossMul(boss) * dt * (world ? 0.85 : 1.0);
+    if (boss.state === "rear" && prevSt !== "rear") A.bossRoar();
+    boss.vis += ((boss.state === "rear" ? -20 : boss.state === "lunge" ? 30 : 0) - boss.vis) * Math.min(1, 9 * dt);
     const tension = Math.max(0, 1 - (player.x - boss.x) / (W * 0.8));
     A.setBossTension(tension);
 
@@ -1405,19 +1421,49 @@ function drawMovers(w) {
 // Boss: Colossal Void Titan / Shadow Leviathan with painterly asset artwork and dynamic multi-layered animations
 function drawBoss(w) {
   if (!boss || !boss.active) return;
-  const bx = boss.x;
+  const bx = boss.x + boss.vis; // visual lean: rears back, then lunges forward
   ctx.save();
 
-  // 1. Soft atmospheric shadow mist wall (blends seamlessly into background scenery)
-  const bgGrad = ctx.createLinearGradient(bx - 380, 0, bx + 140, 0);
+  // 1. Shadow mass with a living, wavy leading edge (no hard vertical cut)
+  const lunging = boss.state === "lunge", rearing = boss.state === "rear";
+  const surge = lunging ? 1 : rearing ? -.5 : 0;
+  const edge = y => bx + 18 + Math.sin(y * .034 + T * 1.7) * 16 + Math.sin(y * .091 - T * 2.6) * 7 + surge * 8 * Math.sin(y * .05 + T * 9);
+  const bgGrad = ctx.createLinearGradient(bx - 380, 0, bx + 60, 0);
   bgGrad.addColorStop(0, "rgba(4, 2, 10, 0.98)");
-  bgGrad.addColorStop(0.5, "rgba(16, 5, 26, 0.90)");
-  bgGrad.addColorStop(0.82, w === 0 ? "rgba(130, 15, 35, 0.40)" : "rgba(80, 20, 140, 0.40)");
-  bgGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+  bgGrad.addColorStop(0.62, "rgba(16, 5, 26, 0.92)");
+  bgGrad.addColorStop(1, w === 0 ? "rgba(110, 14, 34, 0.55)" : "rgba(70, 20, 130, 0.55)");
   ctx.fillStyle = bgGrad;
-  ctx.fillRect(bx - 500, 0, 640, H);
+  ctx.beginPath(); ctx.moveTo(bx - 520, 0);
+  for (let y = 0; y <= H; y += 8) ctx.lineTo(edge(y), y);
+  ctx.lineTo(bx - 520, H); ctx.closePath(); ctx.fill();
 
-  // 2. Trailing Sinuous Leviathan Body Vertebrae (deep undulating shadow spine)
+  // 2. Tentacles: tapered, swaying curves that curl at the tips and end in glowing eye-bulbs
+  const glowCol = w === 0 ? "255, 71, 87" : "168, 85, 247", eyeCol = w === 0 ? "#ff4fa3" : "#d58cff";
+  const reach = lunging ? 1.25 : rearing ? .7 : 1;
+  const TENT = [[34, 92], [104, 118], [172, 104], [238, 124], [296, 96], [346, 84]]; // tips stay within the body's reach (hitbox is the body)
+  for (let i = 0; i < TENT.length; i++) {
+    const y0 = TENT[i][0] + Math.sin(T * 1.3 + i * 2.1) * 9, L = TENT[i][1] * reach, dir = i % 2 ? 1 : -1, N = 22;
+    let px = edge(y0) - 10, py = y0, tipX = px, tipY = py;
+    for (let k = 1; k <= N; k++) {
+      const u = k / N, nx = edge(y0) - 10 + u * L;
+      const ny = y0 + Math.sin(T * 2.6 + i * 1.3 + u * 6) * 24 * u + dir * u * u * 34 + Math.sin(T * 7 + i) * (lunging ? 5 : 1.5) * u;
+      const wd = 15 * (1 - u) + 2.5;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(14, 5, 24, 0.96)"; ctx.lineWidth = wd;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(nx, ny); ctx.stroke();
+      ctx.strokeStyle = `rgba(${glowCol}, ${.25 + .35 * u})`; ctx.lineWidth = Math.max(1, wd * .28);
+      ctx.beginPath(); ctx.moveTo(px, py - wd * .18); ctx.lineTo(nx, ny - wd * .18); ctx.stroke();
+      px = nx; py = ny; tipX = nx; tipY = ny;
+    }
+    const big = i === 1, pr = (big ? 8 : 4.5) * (1 + .15 * Math.sin(T * 5 + i));
+    ctx.save(); ctx.shadowColor = eyeCol; ctx.shadowBlur = big ? 18 : 10;
+    ctx.fillStyle = eyeCol; ctx.beginPath(); ctx.arc(tipX, tipY, pr, 0, 6.2832); ctx.fill(); ctx.restore();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(tipX - pr * .3, tipY - pr * .25, pr * .32, 0, 6.2832); ctx.fill();
+    if (big) { ctx.beginPath(); ctx.arc(tipX + pr * .2, tipY + pr * .2, pr * .22, 0, 6.2832); ctx.fill(); }
+  }
+
+  // Trailing vertebrae behind the head
   for (let i = 5; i >= 1; i--) {
     const lagT = T * 2.2 - i * 0.45;
     const segX = bx - 110 - i * 46 + Math.sin(lagT) * 12;
@@ -1427,10 +1473,7 @@ function drawBoss(w) {
     segGrad.addColorStop(0, w === 0 ? "rgba(22, 6, 26, 0.92)" : "rgba(18, 6, 34, 0.92)");
     segGrad.addColorStop(0.5, w === 0 ? "rgba(70, 12, 30, 0.4)" : "rgba(55, 15, 80, 0.4)");
     segGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = segGrad;
-    ctx.beginPath();
-    ctx.arc(segX, segY, segR, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = segGrad; ctx.beginPath(); ctx.arc(segX, segY, segR, 0, Math.PI * 2); ctx.fill();
   }
 
   // 3. Render trailing void smoke puffs & glowing embers
@@ -1587,7 +1630,7 @@ function drawHud() {
     text(bName, bx0 + 26, by0 + 12, 10, bCol, "left", true, FONT_HEADER);
 
     // Escape Distance Readout
-    const distText = dist <= 3 ? "CRITICAL!" : `${dist}m`;
+    const distText = boss.state === "lunge" ? "LUNGE!" : boss.state === "rear" ? "IT ROARS..." : dist <= 3 ? "CRITICAL!" : `${dist}m`;
     text(distText, bx0 + bw - 10, by0 + 12, 10, bCol, "right", true, FONT_BODY);
 
     // Mini Progress Meter Gauge (tracks the closing gap)
@@ -2059,9 +2102,9 @@ if (typeof window !== "undefined" && window.__SHIFT_TEST__) Object.assign(window
   count: () => LEVELS.length,
   setBudget(n) { budget = n; },
   start(i) { deaths = 0; levelDeaths = 0; load(i, true); state = "play"; banner = 0; fade = 0; particles.length = 0; },
-  snap: () => ({ p: { ...player }, lv: level.map(r => r.slice()), dirs: runs.map(r => r.dir), world, budget, deaths, stepT, gate: gateClosed, mt: moverT, sc: shardsCollected, sh: shards.map(s => s.collected) }),
-  restore(s) { player = { ...s.p }; level = s.lv.map(r => r.slice()); runs.forEach((r, i) => r.dir = s.dirs[i]); world = s.world; gateClosed = s.gate; moverT = s.mt; stepMovers(0); budget = s.budget; deaths = s.deaths; stepT = s.stepT; shardsCollected = s.sc || 0; if (s.sh) shards.forEach((sh, idx) => sh.collected = s.sh[idx]); state = "play"; },
-  info: () => ({ ride: player.ride, mt: moverT, movers: movers.length > 0, gate: gateClosed, x: player.x, y: player.y, vx: player.vx, vy: player.vy, ground: player.ground, world, budget, state, deaths, sc: shardsCollected, grid: runs.map(r => level[r.r].join("")).join("|") + runs.map(r => r.dir).join("") + +gateClosed + +!!player.pad + +!!player.onLever + shardsCollected }),
+  snap: () => ({ p: { ...player }, lv: level.map(r => r.slice()), dirs: runs.map(r => r.dir), world, budget, deaths, stepT, gate: gateClosed, mt: moverT, sc: shardsCollected, sh: shards.map(s => s.collected), bx: boss ? boss.x : 0, bt: boss ? boss.t : 0, bs: boss ? boss.state : "" }),
+  restore(s) { player = { ...s.p }; level = s.lv.map(r => r.slice()); runs.forEach((r, i) => r.dir = s.dirs[i]); world = s.world; gateClosed = s.gate; moverT = s.mt; stepMovers(0); budget = s.budget; deaths = s.deaths; stepT = s.stepT; shardsCollected = s.sc || 0; if (boss) { boss.x = s.bx; boss.t = s.bt; boss.state = s.bs; boss.vis = 0; } if (s.sh) shards.forEach((sh, idx) => sh.collected = s.sh[idx]); state = "play"; },
+  info: () => ({ ride: player.ride, mt: moverT, movers: movers.length > 0, gate: gateClosed, x: player.x, y: player.y, vx: player.vx, vy: player.vy, ground: player.ground, world, budget, state, deaths, sc: shardsCollected, bt: boss ? boss.t : -1, grid: runs.map(r => level[r.r].join("")).join("|") + runs.map(r => r.dir).join("") + +gateClosed + +!!player.pad + +!!player.onLever + shardsCollected }),
   step({ dir = 0, jump = false, shift = false, frames = 6 }) {
     const d0 = deaths; keys.ArrowLeft = dir < 0; keys.ArrowRight = dir > 0; keys.Space = jump;
     for (let f = 0; f < frames; f++) {
