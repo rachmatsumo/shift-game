@@ -133,23 +133,25 @@ if (typeof window !== "undefined") {
         else if (pt.y >= 242 && pt.y <= 266 && typeof I18N !== "undefined") { A.click(); I18N.toggleLang(); }
       }
     } else if (state === "pause") {
-      const px = W / 2 - 135, py = 50, pw = 270, ph = 245;
+      const px = W / 2 - 135, py = 46, pw = 270, ph = 250;
       const inClose = pt.x >= px + pw - 34 && pt.x <= px + pw - 4 && pt.y >= py + 6 && pt.y <= py + 36;
       const outside = pt.x < px || pt.x > px + pw || pt.y < py || pt.y > py + ph;
       if (inClose || outside) {
         A.click(); A.pause(false); setState("play"); return;
       }
       if (pt.x >= px + 16 && pt.x <= px + pw - 16) {
-        if (pt.y >= py + 48 && pt.y <= py + 78) { // Resume
-          A.click(); A.pause(false); setState("play"); return;
-        } else if (pt.y >= py + 83 && pt.y <= py + 113) { // Restart
-          A.click(); A.pause(false); setState("play"); restart(); return;
-        } else if (pt.y >= py + 118 && pt.y <= py + 148) { // Level Select
-          A.click(); A.pause(false); cursor = li; setState("select"); return;
-        } else if (pt.y >= py + 153 && pt.y <= py + 183) { // Sound toggle
-          A.toggleMute(); return;
-        } else if (pt.y >= py + 188 && pt.y <= py + 218) { // Main Menu
-          A.click(); A.pause(false); setState("title"); load(0, false); return;
+        for (let i = 0; i < 5; i++) {
+          const by = py + 46 + i * 35;
+          if (pt.y >= by && pt.y <= by + 28) {
+            pauseIndex = i;
+            A.click();
+            if (i === 0) { A.pause(false); setState("play"); }
+            else if (i === 1) { A.pause(false); setState("play"); restart(); }
+            else if (i === 2) { A.pause(false); cursor = li; setState("select"); }
+            else if (i === 3) { A.toggleMute(); }
+            else if (i === 4) { A.pause(false); setState("title"); load(0, false); }
+            return;
+          }
         }
       }
       return;
@@ -214,6 +216,19 @@ if (typeof window !== "undefined") {
           const y = 152 + i * 27;
           if (pt.y >= y - 18 && pt.y <= y + 6) {
             titleIndex = i;
+            break;
+          }
+        }
+      }
+    }
+    if (state === "pause" && e.pointerType !== "touch") {
+      const pt = getCanvasPos(e);
+      const px = W / 2 - 135, py = 46, pw = 270;
+      if (pt.x >= px + 16 && pt.x <= px + pw - 16) {
+        for (let i = 0; i < 5; i++) {
+          const by = py + 46 + i * 35;
+          if (pt.y >= by && pt.y <= by + 28) {
+            pauseIndex = i;
             break;
           }
         }
@@ -344,6 +359,7 @@ let shards = [], shardsTotal = 0, shardsCollected = 0;
 let levelCols = 20, camX = 0, camTargetX = 0, boss = null, bossParticles = [];
 const springAnim = {};
 let titleIndex = 0;
+let pauseIndex = 0;
 let lbTab = 0, lbLevel = 0;
 const showPlayer = () => state !== "title" && state !== "select" && state !== "lore" && state !== "leaderboard";
 
@@ -364,7 +380,13 @@ function showLeaderboard() {
 function setState(s, pushHistory = true) {
   const prev = state;
   state = s;
-  if (s === "pause") A.pause(true), A.duck(true); else A.duck(false);
+  if (s === "pause") {
+    pauseIndex = 0;
+    A.pause(true);
+    A.duck(true);
+  } else {
+    A.duck(false);
+  }
   if (s === "title" || s === "select" || s === "lore" || s === "leaderboard" || s === "win" || s === "end") {
     A.playMusic("menu");
   } else if (s === "play") {
@@ -866,26 +888,27 @@ const tileSlideImg = { day: null, night: null };
 const moverPlatformImg = { day: null, night: null };
 const sawBladeImg = { day: null, night: null };
 const spikesImg = { floorDay: null, floorNight: null, ceiling: null };
+const ASSET_VER = "18";
 if (typeof Image !== "undefined") {
   [1, 2, 3, 4, 5].forEach(num => {
-    const im = new Image(); im.src = `assets/comic_${num}.jpg`; comicImages.push(im);
+    const im = new Image(); im.src = `assets/comic_${num}.jpg?v=${ASSET_VER}`; comicImages.push(im);
   });
   bossColossusImg = new Image();
-  bossColossusImg.src = "assets/boss_colossus.png";
+  bossColossusImg.src = `assets/boss_colossus.png?v=${ASSET_VER}`;
 
-  tileGroundImg[0] = new Image(); tileGroundImg[0].src = "assets/tile_ground_day.png";
-  tileGroundImg[1] = new Image(); tileGroundImg[1].src = "assets/tile_ground_night.png";
-  tileBlockImg.day = new Image(); tileBlockImg.day.src = "assets/tile_block_day.png";
-  tileBlockImg.night = new Image(); tileBlockImg.night.src = "assets/tile_block_night.png";
-  tileSlideImg.day = new Image(); tileSlideImg.day.src = "assets/tile_slide_day.png";
-  tileSlideImg.night = new Image(); tileSlideImg.night.src = "assets/tile_slide_night.png";
-  moverPlatformImg.day = new Image(); moverPlatformImg.day.src = "assets/mover_platform_day.png";
-  moverPlatformImg.night = new Image(); moverPlatformImg.night.src = "assets/mover_platform_night.png";
-  sawBladeImg.day = new Image(); sawBladeImg.day.src = "assets/saw_blade_day.png";
-  sawBladeImg.night = new Image(); sawBladeImg.night.src = "assets/saw_blade_night.png";
-  spikesImg.floorDay = new Image(); spikesImg.floorDay.src = "assets/spikes_floor_day.png";
-  spikesImg.floorNight = new Image(); spikesImg.floorNight.src = "assets/spikes_floor_night.png";
-  spikesImg.ceiling = new Image(); spikesImg.ceiling.src = "assets/spikes_ceiling.png";
+  tileGroundImg[0] = new Image(); tileGroundImg[0].src = `assets/tile_ground_day.png?v=${ASSET_VER}`;
+  tileGroundImg[1] = new Image(); tileGroundImg[1].src = `assets/tile_ground_night.png?v=${ASSET_VER}`;
+  tileBlockImg.day = new Image(); tileBlockImg.day.src = `assets/tile_block_day.png?v=${ASSET_VER}`;
+  tileBlockImg.night = new Image(); tileBlockImg.night.src = `assets/tile_block_night.png?v=${ASSET_VER}`;
+  tileSlideImg.day = new Image(); tileSlideImg.day.src = `assets/tile_slide_day.png?v=${ASSET_VER}`;
+  tileSlideImg.night = new Image(); tileSlideImg.night.src = `assets/tile_slide_night.png?v=${ASSET_VER}`;
+  moverPlatformImg.day = new Image(); moverPlatformImg.day.src = `assets/mover_platform_day.png?v=${ASSET_VER}`;
+  moverPlatformImg.night = new Image(); moverPlatformImg.night.src = `assets/mover_platform_night.png?v=${ASSET_VER}`;
+  sawBladeImg.day = new Image(); sawBladeImg.day.src = `assets/saw_blade_day.png?v=${ASSET_VER}`;
+  sawBladeImg.night = new Image(); sawBladeImg.night.src = `assets/saw_blade_night.png?v=${ASSET_VER}`;
+  spikesImg.floorDay = new Image(); spikesImg.floorDay.src = `assets/spikes_floor_day.png?v=${ASSET_VER}`;
+  spikesImg.floorNight = new Image(); spikesImg.floorNight.src = `assets/spikes_floor_night.png?v=${ASSET_VER}`;
+  spikesImg.ceiling = new Image(); spikesImg.ceiling.src = `assets/spikes_ceiling.png?v=${ASSET_VER}`;
 }
 
 // Profile Modal controller
@@ -2237,7 +2260,7 @@ function drawPause() {
   biIcon(BI.close, px + pw - 20, py + 20, 12, "#fff");
 
   const pauseButtons = [
-    { key: "P / ESC", icon: BI.play, label: "Resume Game", primary: true },
+    { key: "ESC", icon: BI.play, label: "Resume Game" },
     { key: "R", icon: BI.restart, label: "Restart Level" },
     { key: "Q", icon: BI.grid, label: "Level Select" },
     { key: "M", icon: A.muted ? BI.soundOff : BI.soundOn, label: A.muted ? "Sound: OFF" : "Sound: ON" },
@@ -2246,15 +2269,26 @@ function drawPause() {
 
   pauseButtons.forEach((b, i) => {
     const by = py + 46 + i * 35;
-    const bg = b.primary ? "rgba(0, 206, 201, 0.22)" : "rgba(255, 255, 255, 0.08)";
-    const border = b.primary ? "#00cec9" : "rgba(255, 255, 255, 0.2)";
+    const isSelected = (i === pauseIndex);
+    const pulse = isSelected ? .5 + .5 * Math.sin(T * 8) : 0;
+    const bg = isSelected ? `rgba(0, 206, 201, ${.24 + pulse * .14})` : "rgba(255, 255, 255, 0.08)";
+    const border = isSelected ? "#00cec9" : "rgba(255, 255, 255, 0.2)";
+
     panel(px + 16, by, pw - 32, 28, bg, border);
-    keycap(b.key, px + 24, by + 18, 38);
-    biIcon(b.icon, px + 76, by + 14, 13, b.primary ? "#00cec9" : "#ffd166");
-    text(b.label, px + 92, by + 19, 12, b.primary ? "#00cec9" : "#fff", "left", true, FONT_HEADER);
+
+    if (isSelected) {
+      ctx.save();
+      ctx.shadowColor = "#00cec9"; ctx.shadowBlur = 8;
+      text("✦", px + 24, by + 18, 10, "#00cec9", "center");
+      ctx.restore();
+    }
+
+    keycap(b.key, px + 28, by + 18, 34);
+    biIcon(b.icon, px + 76, by + 14, 13, isSelected ? "#00cec9" : "#ffd166");
+    text(b.label, px + 92, by + 19, 12, isSelected ? "#00cec9" : "#fff", "left", true, FONT_HEADER);
   });
 
-  text("Tap opsi di atas atau luar kotak untuk lanjut", W / 2, py + ph - 10, 9.5, "rgba(255,255,255,0.55)", "center", false);
+  text("▲ ▼ / W S: Select  •  ENTER / SPACE: Pilih  •  ESC / P: Tutup", W / 2, py + ph - 10, 9.5, "rgba(255,255,255,0.65)", "center", false);
 }
 function drawWin(final) {
   ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, H);
@@ -2374,11 +2408,36 @@ function menuInput() {
     if (hit("Escape")) { A.back(); setState("title"); }
     if (hit("Space", "Enter")) { if (cursor > save.unlocked) A.locked(); else { A.click(); deaths = 0; time = 0; startLevel(cursor); } }
   } else if (state === "pause") {
-    if (hit("Escape", "KeyP", "Space")) { A.pause(false); setState("play"); }
-    if (hit("KeyR")) { setState("play"); restart(); }
-    if (hit("KeyQ")) { A.back(); cursor = li; setState("select"); }
-    if (hit("KeyM")) { A.toggleMute(); }
-    if (hit("KeyX")) { A.back(); setState("title"); load(0, false); }
+    if (hit("ArrowUp", "KeyW")) {
+      pauseIndex = (pauseIndex - 1 + 5) % 5;
+      A.move();
+    } else if (hit("ArrowDown", "KeyS")) {
+      pauseIndex = (pauseIndex + 1) % 5;
+      A.move();
+    } else if (hit("Space", "Enter")) {
+      A.click();
+      if (pauseIndex === 0) {
+        A.pause(false); setState("play");
+      } else if (pauseIndex === 1) {
+        A.pause(false); setState("play"); restart();
+      } else if (pauseIndex === 2) {
+        A.pause(false); cursor = li; setState("select");
+      } else if (pauseIndex === 3) {
+        A.toggleMute();
+      } else if (pauseIndex === 4) {
+        A.pause(false); setState("title"); load(0, false);
+      }
+    } else if (hit("Escape", "KeyP")) {
+      A.pause(false); setState("play");
+    } else if (hit("KeyR")) {
+      A.pause(false); setState("play"); restart();
+    } else if (hit("KeyQ")) {
+      A.pause(false); cursor = li; setState("select");
+    } else if (hit("KeyM")) {
+      A.toggleMute();
+    } else if (hit("KeyX")) {
+      A.pause(false); setState("title"); load(0, false);
+    }
   } else if (state === "win") {
     if (winT > .3 && hit("Space", "Enter")) { A.click(); startLevel(li + 1); }
   } else if (state === "end") {
