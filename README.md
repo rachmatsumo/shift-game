@@ -4,12 +4,36 @@
   <img src="assets/og-image.jpg" alt="SHIFT: The Twilight Weaver - Cover & Gameplay Banner" width="100%" />
 </p>
 
+<p align="center">
+  <a href="https://shift.webkuy.com"><img src="https://img.shields.io/badge/%E2%96%B6%20PLAY%20NOW-shift.webkuy.com-ffd166?style=for-the-badge&labelColor=090614" alt="Play SHIFT in your browser" /></a>
+  <a href="https://itch.io/jam/game-off-2026"><img src="https://img.shields.io/badge/Game%20Off-2026-7c5cff?style=for-the-badge&labelColor=090614" alt="GitHub Game Off 2026" /></a>
+</p>
+
+<p align="center"><b><a href="https://shift.webkuy.com">&#127918; Coba langsung di browser: shift.webkuy.com</a></b> (desktop &amp; mobile landscape, tanpa instalasi)</p>
+
 A handcrafted puzzle-platformer created for **[GitHub Game Off 2026](https://itch.io/jam/game-off-2026)** (Theme: **SHIFT**).
 
 > **Author & Creator:** [github.com/rachmatsumo](https://github.com/rachmatsumo)  
 > **Repository:** [github.com/rachmatsumo/shift-game](https://github.com/rachmatsumo)  
 > **Category:** 2D Puzzle-Platformer / Web Game  
 > **License:** MIT  
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><a href="https://shift.webkuy.com"><img src="docs/title.png" alt="Title screen" /></a><br /><sub><b>Title</b> - dunia terbelah antara siang dan malam</sub></td>
+    <td width="50%"><a href="https://shift.webkuy.com"><img src="docs/gameplay-night.png" alt="Night realm gameplay" /></a><br /><sub><b>Night Realm</b> - gravitasi rendah, waktu melambat, kumpulkan shard</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="https://shift.webkuy.com"><img src="docs/boss-chase.png" alt="Boss chase" /></a><br /><sub><b>Boss Chase</b> - lari dan SHIFT sebelum sang raja menangkapmu</sub></td>
+    <td width="50%"><a href="https://shift.webkuy.com"><img src="docs/level-select.png" alt="Level select" /></a><br /><sub><b>50 Level</b> - dengan boss di setiap kelipatan 5</sub></td>
+  </tr>
+</table>
+
+> Screenshot dibuat otomatis dengan `NODE_PATH=$(npm root -g) node tools/screenshots.js` (puppeteer + Chrome).
 
 ---
 
@@ -26,7 +50,8 @@ Pemain mengendalikan **Sang Penenun Senja** (*The Twilight Weaver*), sosok penge
    - **Malam (Night Realm):** Gravitasi rendah (*low gravity*), lompatan melayang tinggi, dan perlambatan waktu yang anggun.
 3. **Balok Runic Geser (Movable Tracks)**: Rel platform ungu interaktif yang bergeser posisi setiap kali dimensi ditukar, menuntut strategi dan ketepatan timing.
 4. **50 Level Buatan Tangan & Pecahan Shard**: Kumpulkan seluruh pecahan kristal bercahaya (*Shards*) di setiap level untuk membuka Gerbang Runic menuju dimensi berikutnya.
-5. **Kejaran Boss Kolosal (Chase Sequences)**: Hadapi kejaran menegangkan dari *Void Shadow Colossus* dan *Astral Leviathan* yang menuntut transisi dimensi cepat tanpa henti.
+5. **Kejaran Boss di Setiap Kelipatan 5**: Sembilan boss (level 5-45) mengejar dari kiri dengan tentakel bermata yang hidup. Boss bergerak berirama: *berjalan, mundur sambil meraung (telegraf), lalu menerjang*. **Level 50 adalah raja terakhir, The Primordial Shadow**: 150 kolom, 4 shard wajib, dan boss yang makin ganas serta makin cepat hingga akhir.
+   - *Anti-curang:* level yang dibuka dengan tombol `U` (unlock all) adalah mode latihan dan tidak masuk papan skor.
 6. **Komik Naratif & Filosofis (5 Babak)**: Ilustrasi visual berkualitas tinggi yang menceritakan asal-usul perpecahan semesta dan makna mendalam dari "menggeser sudut pandang".
 7. **Papan Skor & Kustomisasi Gamer**: Hall of fame lokal dengan penyimpanan skor persisten (`localStorage`), pemilihan avatar, dan bendera negara.
 8. **Pengalaman Mobile & PWA Modern**: Responsif di smartphone mode landscape, kontrol jempol virtual yang ergonomis, gesture swipe untuk navigasi halaman & swipe back bawaan perangkat.
@@ -88,7 +113,7 @@ Papan peringkat (*Leaderboard / Hall of Fame*) berjalan secara lokal di browser 
 - **Zero External Dependencies:** 100% Vanilla ES6 JavaScript + Canvas 2D API (`1920x1080` resolusi dasar dengan penyesuaian skala dinamis).
 - **Procedural Synthesizer Audio Engine:** Sintesis polifonik berbasis Web Audio API tanpa file audio MP3/WAV eksternal (progresi akor Lydian/Dorian, arpeggio senja, dan denyut ketegangan boss).
 - **PWA & Offline Capable:** Service Worker caching (`sw.js`), web app manifest (`manifest.json`), dan overlay orientasi landscape.
-- **Headless BFS Solver:** Built-in verification suite (`node tools/verify-levels.js`) yang memverifikasi seluruh 50 level 100% dapat diselesaikan (*solvable*).
+- **Headless Solver:** `node tools/verify-levels.js` (atau `tools/verify-parallel.sh` di semua core) memainkan kode game yang asli dan membuktikan setiap level **bisa diselesaikan**, termasuk kejaran boss (posisi boss ikut disimulasikan). Tanpa `FAST=1`, solver juga memeriksa apakah level bisa diselesaikan **tanpa shift** (`noshift=CHEAT` = level hambar/bisa dicurangi) dan mencari jumlah shift minimum untuk jatah yang ketat.
 
 ---
 
