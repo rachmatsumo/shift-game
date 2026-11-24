@@ -795,12 +795,23 @@ function worldIcon(w, x, y, r) {
 const comicImages = [];
 let comicPage = 0;
 let bossColossusImg = null;
+const tileGroundImg = [null, null];
+const tileBlockImg = { day: null, night: null };
+const spikesImg = { floorDay: null, floorNight: null, ceiling: null };
 if (typeof Image !== "undefined") {
   [1, 2, 3, 4, 5].forEach(num => {
     const im = new Image(); im.src = `assets/comic_${num}.jpg`; comicImages.push(im);
   });
   bossColossusImg = new Image();
   bossColossusImg.src = "assets/boss_colossus.png";
+
+  tileGroundImg[0] = new Image(); tileGroundImg[0].src = "assets/tile_ground_day.png";
+  tileGroundImg[1] = new Image(); tileGroundImg[1].src = "assets/tile_ground_night.png";
+  tileBlockImg.day = new Image(); tileBlockImg.day.src = "assets/tile_block_day.png";
+  tileBlockImg.night = new Image(); tileBlockImg.night.src = "assets/tile_block_night.png";
+  spikesImg.floorDay = new Image(); spikesImg.floorDay.src = "assets/spikes_floor_day.png";
+  spikesImg.floorNight = new Image(); spikesImg.floorNight.src = "assets/spikes_floor_night.png";
+  spikesImg.ceiling = new Image(); spikesImg.ceiling.src = "assets/spikes_ceiling.png";
 }
 
 // Profile Modal controller
@@ -1193,30 +1204,42 @@ function drawTiles(w) {
       ctx.beginPath(); ctx.moveTo(bx + 6, y + 16); ctx.lineTo(bx + 12, y + 11); ctx.lineTo(bx + 12, y + 21); ctx.fill();
       ctx.beginPath(); ctx.moveTo(bx + 26, y + 16); ctx.lineTo(bx + 20, y + 11); ctx.lineTo(bx + 20, y + 21); ctx.fill();
     } else if (t === "#") { // Solid Terrain
-      // Stone body
-      ctx.fillStyle = P.solid; ctx.fillRect(x, y, TILE, TILE);
-      ctx.fillStyle = P.solidHi; ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
-      ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(x, y + TILE - 3, TILE, 3);
-
-      // Top fringe: organic grass / moss overhang if block above is open air
       const topOpen = r === 0 || tile(c, r - 1) !== "#";
-      if (topOpen) {
-        ctx.fillStyle = P.trim; ctx.fillRect(x, y, TILE, 5);
-        ctx.fillStyle = P.trimHi; ctx.fillRect(x, y, TILE, 2);
-        // Little grass tufts / crystal spikes on top
-        for (let i = 2; i < TILE - 3; i += 7) {
-          ctx.beginPath(); ctx.moveTo(x + i, y); ctx.lineTo(x + i + 2, y - 3); ctx.lineTo(x + i + 4, y); ctx.fill();
+      const gImg = tileGroundImg[w];
+      if (gImg && gImg.complete && gImg.naturalWidth > 0) {
+        if (topOpen) {
+          ctx.drawImage(gImg, 0, 0, 256, 256, x, y, TILE, TILE);
+        } else {
+          ctx.drawImage(gImg, 0, 48, 256, 208, x, y, TILE, TILE);
+        }
+      } else {
+        // Fallback: Stone body
+        ctx.fillStyle = P.solid; ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = P.solidHi; ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+        ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(x, y + TILE - 3, TILE, 3);
+
+        // Top fringe: organic grass / moss overhang if block above is open air
+        if (topOpen) {
+          ctx.fillStyle = P.trim; ctx.fillRect(x, y, TILE, 5);
+          ctx.fillStyle = P.trimHi; ctx.fillRect(x, y, TILE, 2);
+          for (let i = 2; i < TILE - 3; i += 7) {
+            ctx.beginPath(); ctx.moveTo(x + i, y); ctx.lineTo(x + i + 2, y - 3); ctx.lineTo(x + i + 4, y); ctx.fill();
+          }
         }
       }
     } else if (t === "D" || t === "N") { // Day / Night Shift Blocks
       const active = (t === "D") === (w === 0);
       if (active) {
-        ctx.fillStyle = P.mineDk; ctx.fillRect(x, y, TILE, TILE);
-        ctx.fillStyle = P.mine; ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
-        ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.fillRect(x + 4, y + 4, TILE - 8, 3);
-        // Glowing celestial rune in center
-        ctx.fillStyle = "#fff";
-        ctx.beginPath(); ctx.moveTo(x + 16, y + 9); ctx.lineTo(x + 23, y + 16); ctx.lineTo(x + 16, y + 23); ctx.lineTo(x + 9, y + 16); ctx.closePath(); ctx.fill();
+        const bImg = t === "D" ? tileBlockImg.day : tileBlockImg.night;
+        if (bImg && bImg.complete && bImg.naturalWidth > 0) {
+          ctx.drawImage(bImg, x, y, TILE, TILE);
+        } else {
+          ctx.fillStyle = P.mineDk; ctx.fillRect(x, y, TILE, TILE);
+          ctx.fillStyle = P.mine; ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+          ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.fillRect(x + 4, y + 4, TILE - 8, 3);
+          ctx.fillStyle = "#fff";
+          ctx.beginPath(); ctx.moveTo(x + 16, y + 9); ctx.lineTo(x + 23, y + 16); ctx.lineTo(x + 16, y + 23); ctx.lineTo(x + 9, y + 16); ctx.closePath(); ctx.fill();
+        }
       } else { // Ethereal Ghost Outline
         ctx.strokeStyle = P.ghost; ctx.lineWidth = 1.6; ctx.setLineDash([4, 4]);
         ctx.strokeRect(x + 3, y + 3, TILE - 6, TILE - 6); ctx.setLineDash([]);
@@ -1224,35 +1247,53 @@ function drawTiles(w) {
       }
     } else if (t === "a" || t === "b") { // World-specific Crystalline Brambles
       const on = (t === "a") === (w === 0);
-      for (let i = 0; i < 4; i++) {
-        const bx = x + i * 8, by = y + TILE;
-        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 4, by - 18); ctx.lineTo(bx + 8, by); ctx.closePath();
-        if (on) {
-          const spkGrad = ctx.createLinearGradient(bx, by, bx, by - 18);
-          spkGrad.addColorStop(0, "#80150a"); spkGrad.addColorStop(1, w === 0 ? "#ff9f43" : "#ff7675");
-          ctx.fillStyle = spkGrad; ctx.fill();
-          ctx.fillStyle = "#fff"; ctx.fillRect(bx + 3, by - 14, 2, 8);
+      if (on) {
+        const spkImg = w === 0 ? spikesImg.floorDay : spikesImg.floorNight;
+        if (spkImg && spkImg.complete && spkImg.naturalWidth > 0) {
+          ctx.drawImage(spkImg, x, y + 2, TILE, TILE - 2);
         } else {
+          for (let i = 0; i < 4; i++) {
+            const bx = x + i * 8, by = y + TILE;
+            ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 4, by - 18); ctx.lineTo(bx + 8, by); ctx.closePath();
+            const spkGrad = ctx.createLinearGradient(bx, by, bx, by - 18);
+            spkGrad.addColorStop(0, "#80150a"); spkGrad.addColorStop(1, w === 0 ? "#ff9f43" : "#ff7675");
+            ctx.fillStyle = spkGrad; ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.fillRect(bx + 3, by - 14, 2, 8);
+          }
+        }
+      } else {
+        for (let i = 0; i < 4; i++) {
+          const bx = x + i * 8, by = y + TILE;
+          ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 4, by - 18); ctx.lineTo(bx + 8, by); ctx.closePath();
           ctx.strokeStyle = P.ghost; ctx.lineWidth = 1.5; ctx.stroke();
         }
       }
     } else if (t === "T") { // Ceiling Spikes (Crimson Crystals)
-      for (let i = 0; i < 4; i++) {
-        const bx = x + i * 8, by = y;
-        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 4, by + 18); ctx.lineTo(bx + 8, by); ctx.closePath();
-        const spkGrad = ctx.createLinearGradient(bx, by, bx, by + 18);
-        spkGrad.addColorStop(0, "#74111d"); spkGrad.addColorStop(1, "#ff6b6b");
-        ctx.fillStyle = spkGrad; ctx.fill();
-        ctx.fillStyle = "#fff"; ctx.fillRect(bx + 3, by + 4, 2, 7);
+      if (spikesImg.ceiling && spikesImg.ceiling.complete && spikesImg.ceiling.naturalWidth > 0) {
+        ctx.drawImage(spikesImg.ceiling, x, y, TILE, TILE - 2);
+      } else {
+        for (let i = 0; i < 4; i++) {
+          const bx = x + i * 8, by = y;
+          ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 4, by + 18); ctx.lineTo(bx + 8, by); ctx.closePath();
+          const spkGrad = ctx.createLinearGradient(bx, by, bx, by + 18);
+          spkGrad.addColorStop(0, "#74111d"); spkGrad.addColorStop(1, "#ff6b6b");
+          ctx.fillStyle = spkGrad; ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.fillRect(bx + 3, by + 4, 2, 7);
+        }
       }
     } else if (t === "S") { // Floor Spikes (Crimson Crystals)
-      for (let i = 0; i < 4; i++) {
-        const bx = x + i * 8, by = y + TILE;
-        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 4, by - 18); ctx.lineTo(bx + 8, by); ctx.closePath();
-        const spkGrad = ctx.createLinearGradient(bx, by, bx, by - 18);
-        spkGrad.addColorStop(0, "#74111d"); spkGrad.addColorStop(1, "#ff6b6b");
-        ctx.fillStyle = spkGrad; ctx.fill();
-        ctx.fillStyle = "#fff"; ctx.fillRect(bx + 3, by - 13, 2, 7);
+      const spkImg = w === 0 ? spikesImg.floorDay : spikesImg.floorNight;
+      if (spkImg && spkImg.complete && spkImg.naturalWidth > 0) {
+        ctx.drawImage(spkImg, x, y + 2, TILE, TILE - 2);
+      } else {
+        for (let i = 0; i < 4; i++) {
+          const bx = x + i * 8, by = y + TILE;
+          ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 4, by - 18); ctx.lineTo(bx + 8, by); ctx.closePath();
+          const spkGrad = ctx.createLinearGradient(bx, by, bx, by - 18);
+          spkGrad.addColorStop(0, "#74111d"); spkGrad.addColorStop(1, "#ff6b6b");
+          ctx.fillStyle = spkGrad; ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.fillRect(bx + 3, by - 13, 2, 7);
+        }
       }
     } else if (t === "J") { // Spring Pad (Launch Pedestal)
       const sq = Math.abs(Math.sin(T * 6)) * 2;
@@ -1424,43 +1465,65 @@ function drawBoss(w) {
   const bx = boss.x + boss.vis; // visual lean: rears back, then lunges forward
   ctx.save();
 
-  // 1. Shadow mass with a living, wavy leading edge (no hard vertical cut)
+  // 1. Shadow mass with a living, wavy leading edge (soft encroaching void tempest)
   const lunging = boss.state === "lunge", rearing = boss.state === "rear";
   const surge = lunging ? 1 : rearing ? -.5 : 0;
   const edge = y => bx + 18 + Math.sin(y * .034 + T * 1.7) * 16 + Math.sin(y * .091 - T * 2.6) * 7 + surge * 8 * Math.sin(y * .05 + T * 9);
-  const bgGrad = ctx.createLinearGradient(bx - 380, 0, bx + 60, 0);
-  bgGrad.addColorStop(0, "rgba(4, 2, 10, 0.98)");
-  bgGrad.addColorStop(0.62, "rgba(16, 5, 26, 0.92)");
-  bgGrad.addColorStop(1, w === 0 ? "rgba(110, 14, 34, 0.55)" : "rgba(70, 20, 130, 0.55)");
+  
+  // Soft outer mist veil
+  const mistGrad = ctx.createLinearGradient(bx - 420, 0, bx + 90, 0);
+  mistGrad.addColorStop(0, "rgba(4, 2, 10, 0.95)");
+  mistGrad.addColorStop(0.55, "rgba(14, 5, 24, 0.85)");
+  mistGrad.addColorStop(0.85, w === 0 ? "rgba(120, 15, 38, 0.35)" : "rgba(75, 22, 135, 0.35)");
+  mistGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = mistGrad;
+  ctx.beginPath(); ctx.moveTo(bx - 520, 0);
+  for (let y = 0; y <= H; y += 8) ctx.lineTo(edge(y) + 24, y);
+  ctx.lineTo(bx - 520, H); ctx.closePath(); ctx.fill();
+
+  // Dense inner void core
+  const bgGrad = ctx.createLinearGradient(bx - 380, 0, bx + 50, 0);
+  bgGrad.addColorStop(0, "rgba(3, 1, 8, 0.99)");
+  bgGrad.addColorStop(0.7, "rgba(10, 4, 18, 0.95)");
+  bgGrad.addColorStop(1, w === 0 ? "rgba(80, 10, 25, 0.7)" : "rgba(50, 15, 90, 0.7)");
   ctx.fillStyle = bgGrad;
   ctx.beginPath(); ctx.moveTo(bx - 520, 0);
   for (let y = 0; y <= H; y += 8) ctx.lineTo(edge(y), y);
   ctx.lineTo(bx - 520, H); ctx.closePath(); ctx.fill();
 
-  // 2. Tentacles: tapered, swaying curves that curl at the tips and end in glowing eye-bulbs
-  const glowCol = w === 0 ? "255, 71, 87" : "168, 85, 247", eyeCol = w === 0 ? "#ff4fa3" : "#d58cff";
+  // 2. Tendrils: organic shadowy void tendrils with ethereal edge mist and whisps
+  const glowCol = w === 0 ? "255, 71, 87" : "168, 85, 247";
   const reach = lunging ? 1.25 : rearing ? .7 : 1;
-  const TENT = [[34, 92], [104, 118], [172, 104], [238, 124], [296, 96], [346, 84]]; // tips stay within the body's reach (hitbox is the body)
+  const TENT = [[34, 92], [104, 118], [172, 104], [238, 124], [296, 96], [346, 84]];
   for (let i = 0; i < TENT.length; i++) {
     const y0 = TENT[i][0] + Math.sin(T * 1.3 + i * 2.1) * 9, L = TENT[i][1] * reach, dir = i % 2 ? 1 : -1, N = 22;
     let px = edge(y0) - 10, py = y0, tipX = px, tipY = py;
     for (let k = 1; k <= N; k++) {
       const u = k / N, nx = edge(y0) - 10 + u * L;
       const ny = y0 + Math.sin(T * 2.6 + i * 1.3 + u * 6) * 24 * u + dir * u * u * 34 + Math.sin(T * 7 + i) * (lunging ? 5 : 1.5) * u;
-      const wd = 15 * (1 - u) + 2.5;
+      const wd = 14 * (1 - u) + 2;
       ctx.lineCap = "round";
-      ctx.strokeStyle = "rgba(14, 5, 24, 0.96)"; ctx.lineWidth = wd;
+      // Soft outer shadowy aura
+      ctx.strokeStyle = w === 0 ? "rgba(110, 16, 32, 0.28)" : "rgba(80, 20, 120, 0.28)";
+      ctx.lineWidth = wd + 4;
       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(nx, ny); ctx.stroke();
-      ctx.strokeStyle = `rgba(${glowCol}, ${.25 + .35 * u})`; ctx.lineWidth = Math.max(1, wd * .28);
+      // Dense shadowy tendril body
+      ctx.strokeStyle = "rgba(10, 4, 18, 0.95)"; ctx.lineWidth = wd;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(nx, ny); ctx.stroke();
+      // Ethereal subtle highlight ridge
+      ctx.strokeStyle = `rgba(${glowCol}, ${.12 + .25 * u})`; ctx.lineWidth = Math.max(1, wd * .22);
       ctx.beginPath(); ctx.moveTo(px, py - wd * .18); ctx.lineTo(nx, ny - wd * .18); ctx.stroke();
       px = nx; py = ny; tipX = nx; tipY = ny;
     }
-    const big = i === 1, pr = (big ? 8 : 4.5) * (1 + .15 * Math.sin(T * 5 + i));
-    ctx.save(); ctx.shadowColor = eyeCol; ctx.shadowBlur = big ? 18 : 10;
-    ctx.fillStyle = eyeCol; ctx.beginPath(); ctx.arc(tipX, tipY, pr, 0, 6.2832); ctx.fill(); ctx.restore();
+    // Wispy ethereal spark at the tendril tip (organic void fire mote)
+    const pr = 2.5 + Math.sin(T * 5 + i) * 1.2;
+    ctx.save();
+    ctx.shadowColor = `rgb(${glowCol})`; ctx.shadowBlur = 12;
+    ctx.fillStyle = `rgba(${glowCol}, 0.85)`;
+    ctx.beginPath(); ctx.arc(tipX, tipY, pr, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.arc(tipX - pr * .3, tipY - pr * .25, pr * .32, 0, 6.2832); ctx.fill();
-    if (big) { ctx.beginPath(); ctx.arc(tipX + pr * .2, tipY + pr * .2, pr * .22, 0, 6.2832); ctx.fill(); }
+    ctx.beginPath(); ctx.arc(tipX, tipY, pr * 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   // Trailing vertebrae behind the head
